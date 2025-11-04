@@ -1,0 +1,20 @@
+[Unit]
+Description=OmniRambles Backend API
+After=network.target postgresql.service docker.service
+Wants=postgresql.service docker.service
+
+[Service]
+Type=simple
+User=neil
+WorkingDirectory=/home/neil/Coding/omnirambles/backend
+Environment="NODE_ENV=production"
+EnvironmentFile=/home/neil/Coding/omnirambles/backend/.env
+ExecStart=/home/neil/.nvm/versions/node/v22.20.0/bin/node dist/index.js
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=omnirambles-backend
+
+[Install]
+WantedBy=multi-user.target

@@ -5,11 +5,17 @@ A modern note-taking application with AI-powered automatic categorization using 
 ## Features
 
 - **Plain Text Notes**: Simple, distraction-free note-taking
-- **AI Categorization**: Automatic tagging using Ollama (llama3.2:3b)
+- **AI Categorization**: Automatic tagging using Ollama (gpt-oss:120b-cloud)
+- **Version History**: Track all edits with full version history (v1, v2, v3...)
+- **Enhanced Tag Management**:
+  - Add/remove tags manually or via AI
+  - Visual distinction between AI-generated (blue) and Self-created (green) tags
+  - Browse and reuse existing tags
 - **Smart Filtering**: Filter notes by tags
 - **Flexible Sorting**: Sort by creation or update date
 - **Mobile Responsive**: Works seamlessly on mobile and desktop
 - **Modern Stack**: React + TypeScript + Node.js + PostgreSQL
+- **Systemd Service**: Run as a production system service
 
 ## Tech Stack
 
@@ -28,13 +34,14 @@ A modern note-taking application with AI-powered automatic categorization using 
 
 ### Infrastructure
 - PostgreSQL (Docker or standalone)
-- Ollama (llama3.2:3b)
+- Ollama (gpt-oss:120b-cloud or llama3.2:3b)
+- Systemd (optional, for production deployment)
 
 ## Prerequisites
 
 - Node.js 18+ and npm
 - PostgreSQL (running locally, in Docker, or remotely)
-- Ollama (running locally or in Docker with llama3.2:3b model)
+- Ollama (running locally or in Docker with gpt-oss:120b-cloud or llama3.2:3b model)
 
 ## Quick Start
 
@@ -136,25 +143,98 @@ npm run dev
 
 The frontend will be available at `http://localhost:5173`
 
+## Production Deployment (Systemd Service)
+
+To run OmniRambles as a system service that starts automatically on boot:
+
+### 1. Build the Applications
+
+```bash
+# Build backend
+cd backend
+npm install
+npm run build
+
+# Build frontend
+cd ../frontend
+npm install
+npm run build
+```
+
+### 2. Install and Start the Service
+
+The service configuration is already set up to serve both the API and frontend:
+
+```bash
+# Install the service
+cd /home/neil/Coding/omnirambles
+./install-service.sh
+
+# Check service status
+sudo systemctl status omnirambles-backend
+
+# View logs
+journalctl -u omnirambles-backend -f
+```
+
+### 3. Service Management
+
+```bash
+# Start service
+sudo systemctl start omnirambles-backend
+
+# Stop service
+sudo systemctl stop omnirambles-backend
+
+# Restart service (after making changes)
+sudo systemctl restart omnirambles-backend
+
+# Or use the convenience script
+./restart-service.sh
+
+# Disable auto-start on boot
+sudo systemctl disable omnirambles-backend
+```
+
+The app will be available at `http://localhost:3001` (backend serves frontend static files).
+
+**Note:** The systemd service runs the backend which serves both the API at `/api/*` and the frontend static files at the root.
+
 ## Usage
 
-1. Open `http://localhost:5173` in your browser
-2. Type a note in the text area
-3. Click "Save Note" - the AI will automatically analyze and tag your note
-4. Use the filter controls to filter by tags or sort by date
-5. Click the trash icon to delete notes
+1. Open the app in your browser:
+   - Development: `http://localhost:5173` (frontend dev server)
+   - Production: `http://localhost:3001` (systemd service)
+2. **Create a Note**: Type in the text area and click "Save Note"
+   - AI automatically analyzes and tags your note
+3. **Edit a Note**: Click any note card to open the editor
+   - Modify content and click "Save as New Version" (creates v2, v3, etc.)
+   - View previous versions by clicking version buttons (v1, v2, v3)
+4. **Manage Tags**:
+   - Click "+ Add Tag" to add tags manually
+   - Choose from existing tags or create new ones
+   - Tags are marked as "Self" (green) vs AI-generated (blue)
+   - Click × to remove tags
+5. **Filter & Sort**: Use filter controls to filter by tags or sort by date
+6. **Delete Notes**: Click the trash icon on any note card
 
 ## API Endpoints
 
 ### Notes
-- `POST /api/notes` - Create a new note (with AI tagging)
+- `POST /api/notes` - Create a new note (with AI tagging, creates v1)
 - `GET /api/notes` - Get all notes (supports filtering and sorting)
 - `GET /api/notes/:id` - Get a specific note
-- `PUT /api/notes/:id` - Update a note
+- `PUT /api/notes/:id` - Update a note (creates new version)
 - `DELETE /api/notes/:id` - Delete a note
 
 ### Tags
 - `GET /api/tags` - Get all tags
+- `POST /api/notes/:id/tags` - Add a tag to a note (body: `{tagName, source: 'AI'|'Self'}`)
+- `DELETE /api/notes/:id/tags/:tagId` - Remove a tag from a note
+
+### Version History
+- `GET /api/notes/:id/versions` - Get all versions of a note
+- `GET /api/notes/:id/versions/:version` - Get a specific version of a note
 
 ### Query Parameters for GET /api/notes:
 - `tags` - Filter by comma-separated tag names
@@ -169,18 +249,44 @@ The frontend will be available at `http://localhost:5173`
 
 **notes**
 - `id` - Serial primary key
-- `content` - Text content of the note
+- `content` - Text content of the note (current version)
 - `created_at` - Timestamp with timezone
 - `updated_at` - Timestamp with timezone
 
 **tags**
 - `id` - Serial primary key
-- `name` - Unique tag name
+- `name` - Unique tag name (case-insensitive)
+- `source` - Tag origin: 'AI' or 'Self'
 
 **note_tags**
 - `note_id` - Foreign key to notes
 - `tag_id` - Foreign key to tags
 - Composite primary key
+
+**note_versions** (Version History)
+- `id` - Serial primary key
+- `note_id` - Foreign key to notes
+- `version` - Version number (1, 2, 3...)
+- `content` - Content snapshot at this version
+- `created_at` - Timestamp when version was created
+- Unique constraint on (note_id, version)
+
+**note_version_tags** (Version-specific tags)
+- `note_version_id` - Foreign key to note_versions
+- `tag_id` - Foreign key to tags
+- Composite primary key
+
+### Migration
+
+If you have an existing database, run the migration to add version history:
+
+```bash
+# Docker PostgreSQL
+docker exec -i <postgres-container> psql -U <username> -d omnirambles < backend/db/migrate_versions.sql
+
+# Standalone PostgreSQL
+psql -U postgres -d omnirambles -f backend/db/migrate_versions.sql
+```
 
 ## Development
 
@@ -354,6 +460,9 @@ This project is designed to work with existing PostgreSQL and Ollama instances:
 
 ## Future Enhancements
 
+- [x] ~~Version history tracking~~ ✅ Implemented
+- [x] ~~Manual tag management~~ ✅ Implemented
+- [x] ~~Systemd service setup~~ ✅ Implemented
 - [ ] Search notes by content (full-text search)
 - [ ] Rich text editing (Markdown support)
 - [ ] Note attachments and images

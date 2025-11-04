@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
 import { testConnection } from './db';
 import { createNote, getNotes, getNoteById, updateNote, deleteNote, getAllTags, getNoteVersions, getNoteVersion, addTagToNote, removeTagFromNote } from './notes';
 import { CreateNoteRequest, UpdateNoteRequest, NoteFilters } from './types';
@@ -13,6 +14,10 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Serve frontend static files in production
+const frontendDistPath = path.join(__dirname, '../../frontend/dist');
+app.use(express.static(frontendDistPath));
 
 // Health check endpoint
 app.get('/api/health', (req: Request, res: Response) => {
@@ -195,6 +200,11 @@ app.delete('/api/notes/:id/tags/:tagId', async (req: Request, res: Response) => 
     console.error('Error removing tag from note:', error);
     res.status(500).json({ error: 'Failed to remove tag from note' });
   }
+});
+
+// Catch-all route to serve index.html for client-side routing
+app.get('*', (req: Request, res: Response) => {
+  res.sendFile(path.join(frontendDistPath, 'index.html'));
 });
 
 // Start server

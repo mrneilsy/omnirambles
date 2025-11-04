@@ -73,26 +73,34 @@ export async function getNotes(filters: NoteFilters = {}): Promise<Note[]> {
     offset = 0,
   } = filters;
 
-  let query = `
-    SELECT n.*,
-      COALESCE(MAX(nv.version), 1) as current_version,
-      json_agg(DISTINCT json_build_object('id', t.id, 'name', t.name, 'source', t.source)) FILTER (WHERE t.id IS NOT NULL) as tags
-    FROM notes n
-    LEFT JOIN note_tags nt ON n.id = nt.note_id
-    LEFT JOIN tags t ON nt.tag_id = t.id
-    LEFT JOIN note_versions nv ON n.id = nv.note_id
-  `;
-
   const params: any[] = [];
   const conditions: string[] = [];
 
+  let query = `
+    SELECT n.*,
+      COALESCE(MAX(nv.version), 1) as current_version,
+      COALESCE(
+        (SELECT json_agg(json_build_object('id', t.id, 'name', t.name, 'source', t.source))
+         FROM (SELECT DISTINCT t.id, t.name, t.source
+               FROM note_tags nt2
+               JOIN tags t ON nt2.tag_id = t.id
+               WHERE nt2.note_id = n.id) t),
+        '[]'::json
+      ) as tags
+    FROM notes n
+    LEFT JOIN note_versions nv ON n.id = nv.note_id
+  `;
+
+  // Add tag filtering if needed
   if (tags.length > 0) {
     params.push(tags);
-    conditions.push(`t.name = ANY($${params.length})`);
-  }
-
-  if (conditions.length > 0) {
-    query += ` WHERE ${conditions.join(' AND ')}`;
+    query += `
+    WHERE n.id IN (
+      SELECT DISTINCT nt.note_id
+      FROM note_tags nt
+      JOIN tags t ON nt.tag_id = t.id
+      WHERE t.name = ANY($${params.length})
+    )`;
   }
 
   query += ` GROUP BY n.id`;
@@ -110,10 +118,15 @@ export async function getNoteById(id: number): Promise<Note | null> {
     `
     SELECT n.*,
       COALESCE(MAX(nv.version), 1) as current_version,
-      json_agg(DISTINCT json_build_object('id', t.id, 'name', t.name, 'source', t.source)) FILTER (WHERE t.id IS NOT NULL) as tags
+      COALESCE(
+        (SELECT json_agg(json_build_object('id', t.id, 'name', t.name, 'source', t.source))
+         FROM (SELECT DISTINCT t.id, t.name, t.source
+               FROM note_tags nt2
+               JOIN tags t ON nt2.tag_id = t.id
+               WHERE nt2.note_id = n.id) t),
+        '[]'::json
+      ) as tags
     FROM notes n
-    LEFT JOIN note_tags nt ON n.id = nt.note_id
-    LEFT JOIN tags t ON nt.tag_id = t.id
     LEFT JOIN note_versions nv ON n.id = nv.note_id
     WHERE n.id = $1
     GROUP BY n.id
@@ -207,12 +220,16 @@ export async function getNoteVersions(noteId: number): Promise<NoteVersion[]> {
   const result = await pool.query(
     `
     SELECT nv.*,
-      json_agg(DISTINCT json_build_object('id', t.id, 'name', t.name, 'source', t.source)) FILTER (WHERE t.id IS NOT NULL) as tags
+      COALESCE(
+        (SELECT json_agg(json_build_object('id', t.id, 'name', t.name, 'source', t.source))
+         FROM (SELECT DISTINCT t.id, t.name, t.source
+               FROM note_version_tags nvt2
+               JOIN tags t ON nvt2.tag_id = t.id
+               WHERE nvt2.note_version_id = nv.id) t),
+        '[]'::json
+      ) as tags
     FROM note_versions nv
-    LEFT JOIN note_version_tags nvt ON nv.id = nvt.note_version_id
-    LEFT JOIN tags t ON nvt.tag_id = t.id
     WHERE nv.note_id = $1
-    GROUP BY nv.id
     ORDER BY nv.version ASC
     `,
     [noteId]
@@ -224,12 +241,16 @@ export async function getNoteVersion(noteId: number, version: number): Promise<N
   const result = await pool.query(
     `
     SELECT nv.*,
-      json_agg(DISTINCT json_build_object('id', t.id, 'name', t.name, 'source', t.source)) FILTER (WHERE t.id IS NOT NULL) as tags
+      COALESCE(
+        (SELECT json_agg(json_build_object('id', t.id, 'name', t.name, 'source', t.source))
+         FROM (SELECT DISTINCT t.id, t.name, t.source
+               FROM note_version_tags nvt2
+               JOIN tags t ON nvt2.tag_id = t.id
+               WHERE nvt2.note_version_id = nv.id) t),
+        '[]'::json
+      ) as tags
     FROM note_versions nv
-    LEFT JOIN note_version_tags nvt ON nv.id = nvt.note_version_id
-    LEFT JOIN tags t ON nvt.tag_id = t.id
     WHERE nv.note_id = $1 AND nv.version = $2
-    GROUP BY nv.id
     `,
     [noteId, version]
   );
