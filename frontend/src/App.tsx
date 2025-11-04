@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { NoteForm } from './components/NoteForm';
 import { NoteCard } from './components/NoteCard';
+import { NoteEditor } from './components/NoteEditor';
 import { FilterControls } from './components/FilterControls';
 import { Note, Tag, NoteFilters } from './types';
 import { createNote, getNotes, deleteNote, getAllTags } from './api';
@@ -15,6 +16,7 @@ function App() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editingNote, setEditingNote] = useState<Note | null>(null);
 
   // Load notes and tags
   useEffect(() => {
@@ -69,6 +71,27 @@ function App() {
     }
   };
 
+  const handleEditNote = (note: Note) => {
+    setEditingNote(note);
+  };
+
+  const handleCloseEditor = () => {
+    setEditingNote(null);
+  };
+
+  const handleUpdateNote = async () => {
+    await loadNotes();
+    await loadTags();
+    // Refresh the editing note data
+    if (editingNote) {
+      const updatedNotes = await getNotes();
+      const updatedNote = updatedNotes.find(n => n.id === editingNote.id);
+      if (updatedNote) {
+        setEditingNote(updatedNote);
+      }
+    }
+  };
+
   return (
     <div className="app">
       <header className="app-header">
@@ -105,12 +128,22 @@ function App() {
                   key={note.id}
                   note={note}
                   onDelete={handleDeleteNote}
+                  onEdit={handleEditNote}
                 />
               ))}
             </div>
           )}
         </section>
       </main>
+
+      {editingNote && (
+        <NoteEditor
+          note={editingNote}
+          allTags={tags}
+          onClose={handleCloseEditor}
+          onUpdate={handleUpdateNote}
+        />
+      )}
     </div>
   );
 }

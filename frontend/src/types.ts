@@ -3,12 +3,23 @@ export interface Note {
   content: string;
   created_at: string;
   updated_at: string;
+  current_version?: number;
   tags?: Tag[];
 }
 
 export interface Tag {
   id: number;
   name: string;
+  source: 'AI' | 'Self';
+}
+
+export interface NoteVersion {
+  id: number;
+  note_id: number;
+  version: number;
+  content: string;
+  created_at: string;
+  tags?: Tag[];
 }
 
 export interface NoteFilters {

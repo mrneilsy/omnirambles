@@ -1,5 +1,5 @@
 import { pool } from './db';
-import { Note, Tag, CreateNoteRequest, UpdateNoteRequest, NoteFilters } from './types';
+import { Note, Tag, NoteVersion, CreateNoteRequest, UpdateNoteRequest, NoteFilters } from './types';
 import { categorizeTags } from './ollama';
 
 export async function createNote(data: CreateNoteRequest): Promise<Note> {
@@ -17,12 +17,12 @@ export async function createNote(data: CreateNoteRequest): Promise<Note> {
     // Get AI-generated tags
     const tagNames = await categorizeTags(data.content);
 
-    // Insert or get tags
+    // Insert or get tags with AI source
     const tags: Tag[] = [];
     for (const tagName of tagNames) {
       const tagResult = await client.query(
-        'INSERT INTO tags (name) VALUES ($1) ON CONFLICT (name) DO UPDATE SET name = $1 RETURNING *',
-        [tagName]
+        'INSERT INTO tags (name, source) VALUES ($1, $2) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING *',
+        [tagName, 'AI']
       );
       const tag = tagResult.rows[0];
       tags.push(tag);
@@ -34,10 +34,26 @@ export async function createNote(data: CreateNoteRequest): Promise<Note> {
       );
     }
 
+    // Create version 1
+    const versionResult = await client.query(
+      'INSERT INTO note_versions (note_id, version, content) VALUES ($1, 1, $2) RETURNING *',
+      [note.id, data.content]
+    );
+    const version = versionResult.rows[0];
+
+    // Link tags to version
+    for (const tag of tags) {
+      await client.query(
+        'INSERT INTO note_version_tags (note_version_id, tag_id) VALUES ($1, $2)',
+        [version.id, tag.id]
+      );
+    }
+
     await client.query('COMMIT');
 
     return {
       ...note,
+      current_version: 1,
       tags,
     };
   } catch (error) {
@@ -59,10 +75,12 @@ export async function getNotes(filters: NoteFilters = {}): Promise<Note[]> {
 
   let query = `
     SELECT n.*,
-      json_agg(json_build_object('id', t.id, 'name', t.name)) FILTER (WHERE t.id IS NOT NULL) as tags
+      COALESCE(MAX(nv.version), 1) as current_version,
+      json_agg(DISTINCT json_build_object('id', t.id, 'name', t.name, 'source', t.source)) FILTER (WHERE t.id IS NOT NULL) as tags
     FROM notes n
     LEFT JOIN note_tags nt ON n.id = nt.note_id
     LEFT JOIN tags t ON nt.tag_id = t.id
+    LEFT JOIN note_versions nv ON n.id = nv.note_id
   `;
 
   const params: any[] = [];
@@ -91,10 +109,12 @@ export async function getNoteById(id: number): Promise<Note | null> {
   const result = await pool.query(
     `
     SELECT n.*,
-      json_agg(json_build_object('id', t.id, 'name', t.name)) FILTER (WHERE t.id IS NOT NULL) as tags
+      COALESCE(MAX(nv.version), 1) as current_version,
+      json_agg(DISTINCT json_build_object('id', t.id, 'name', t.name, 'source', t.source)) FILTER (WHERE t.id IS NOT NULL) as tags
     FROM notes n
     LEFT JOIN note_tags nt ON n.id = nt.note_id
     LEFT JOIN tags t ON nt.tag_id = t.id
+    LEFT JOIN note_versions nv ON n.id = nv.note_id
     WHERE n.id = $1
     GROUP BY n.id
     `,
@@ -109,11 +129,33 @@ export async function updateNote(id: number, data: UpdateNoteRequest): Promise<N
   try {
     await client.query('BEGIN');
 
-    // Update note content if provided
+    // If content is being updated, create a new version
     if (data.content !== undefined) {
+      // Get current max version
+      const versionResult = await client.query(
+        'SELECT COALESCE(MAX(version), 0) as max_version FROM note_versions WHERE note_id = $1',
+        [id]
+      );
+      const newVersion = versionResult.rows[0].max_version + 1;
+
+      // Update note content
       await client.query(
         'UPDATE notes SET content = $1 WHERE id = $2',
         [data.content, id]
+      );
+
+      // Create new version
+      const newVersionResult = await client.query(
+        'INSERT INTO note_versions (note_id, version, content) VALUES ($1, $2, $3) RETURNING *',
+        [id, newVersion, data.content]
+      );
+      const version = newVersionResult.rows[0];
+
+      // Copy current tags to new version
+      await client.query(
+        `INSERT INTO note_version_tags (note_version_id, tag_id)
+         SELECT $1, tag_id FROM note_tags WHERE note_id = $2`,
+        [version.id, id]
       );
     }
 
@@ -123,15 +165,15 @@ export async function updateNote(id: number, data: UpdateNoteRequest): Promise<N
       await client.query('DELETE FROM note_tags WHERE note_id = $1', [id]);
 
       // Add new tags
-      for (const tagName of data.tags) {
+      for (const tagData of data.tags) {
         const tagResult = await client.query(
-          'INSERT INTO tags (name) VALUES ($1) ON CONFLICT (name) DO UPDATE SET name = $1 RETURNING *',
-          [tagName.toLowerCase()]
+          'INSERT INTO tags (name, source) VALUES ($1, $2) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING *',
+          [tagData.name.toLowerCase(), tagData.source]
         );
         const tag = tagResult.rows[0];
 
         await client.query(
-          'INSERT INTO note_tags (note_id, tag_id) VALUES ($1, $2)',
+          'INSERT INTO note_tags (note_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
           [id, tag.id]
         );
       }
@@ -158,4 +200,76 @@ export async function getAllTags(): Promise<Tag[]> {
     'SELECT * FROM tags ORDER BY name ASC'
   );
   return result.rows;
+}
+
+// Version history functions
+export async function getNoteVersions(noteId: number): Promise<NoteVersion[]> {
+  const result = await pool.query(
+    `
+    SELECT nv.*,
+      json_agg(DISTINCT json_build_object('id', t.id, 'name', t.name, 'source', t.source)) FILTER (WHERE t.id IS NOT NULL) as tags
+    FROM note_versions nv
+    LEFT JOIN note_version_tags nvt ON nv.id = nvt.note_version_id
+    LEFT JOIN tags t ON nvt.tag_id = t.id
+    WHERE nv.note_id = $1
+    GROUP BY nv.id
+    ORDER BY nv.version ASC
+    `,
+    [noteId]
+  );
+  return result.rows;
+}
+
+export async function getNoteVersion(noteId: number, version: number): Promise<NoteVersion | null> {
+  const result = await pool.query(
+    `
+    SELECT nv.*,
+      json_agg(DISTINCT json_build_object('id', t.id, 'name', t.name, 'source', t.source)) FILTER (WHERE t.id IS NOT NULL) as tags
+    FROM note_versions nv
+    LEFT JOIN note_version_tags nvt ON nv.id = nvt.note_version_id
+    LEFT JOIN tags t ON nvt.tag_id = t.id
+    WHERE nv.note_id = $1 AND nv.version = $2
+    GROUP BY nv.id
+    `,
+    [noteId, version]
+  );
+  return result.rows[0] || null;
+}
+
+// Tag management functions
+export async function addTagToNote(noteId: number, tagName: string, source: 'AI' | 'Self'): Promise<Note | null> {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Insert or get tag
+    const tagResult = await client.query(
+      'INSERT INTO tags (name, source) VALUES ($1, $2) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING *',
+      [tagName.toLowerCase(), source]
+    );
+    const tag = tagResult.rows[0];
+
+    // Link note to tag
+    await client.query(
+      'INSERT INTO note_tags (note_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+      [noteId, tag.id]
+    );
+
+    await client.query('COMMIT');
+
+    return await getNoteById(noteId);
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+export async function removeTagFromNote(noteId: number, tagId: number): Promise<Note | null> {
+  await pool.query(
+    'DELETE FROM note_tags WHERE note_id = $1 AND tag_id = $2',
+    [noteId, tagId]
+  );
+  return await getNoteById(noteId);
 }
