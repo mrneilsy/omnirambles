@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(README.md)",
+      "Bash(chmod:*)",
+      "Bash(sudo -u postgres psql:*)",
+      "Bash(psql:*)",
+      "Bash(docker inspect:*)",
+      "Bash(docker exec:*)",
+      "Bash(npm install)",
+      "Bash(npm run dev:*)",
+      "Bash(ip addr:*)",
+      "Bash(curl:*)",
+      "Bash(git init:*)",
+      "Bash(git branch:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
