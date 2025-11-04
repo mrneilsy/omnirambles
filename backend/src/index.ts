@@ -2,7 +2,7 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { testConnection } from './db';
-import { createNote, getNotes, getNoteById, updateNote, deleteNote, getAllTags } from './notes';
+import { createNote, getNotes, getNoteById, updateNote, deleteNote, getAllTags, getNoteVersions, getNoteVersion, addTagToNote, removeTagFromNote } from './notes';
 import { CreateNoteRequest, UpdateNoteRequest, NoteFilters } from './types';
 
 dotenv.config();
@@ -115,6 +115,85 @@ app.get('/api/tags', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error fetching tags:', error);
     res.status(500).json({ error: 'Failed to fetch tags' });
+  }
+});
+
+// Version history endpoints
+app.get('/api/notes/:id/versions', async (req: Request, res: Response) => {
+  try {
+    const noteId = parseInt(req.params.id);
+    const versions = await getNoteVersions(noteId);
+    res.json(versions);
+  } catch (error) {
+    console.error('Error fetching note versions:', error);
+    res.status(500).json({ error: 'Failed to fetch note versions' });
+  }
+});
+
+app.get('/api/notes/:id/versions/:version', async (req: Request, res: Response) => {
+  try {
+    const noteId = parseInt(req.params.id);
+    const version = parseInt(req.params.version);
+    const noteVersion = await getNoteVersion(noteId, version);
+
+    if (!noteVersion) {
+      res.status(404).json({ error: 'Version not found' });
+      return;
+    }
+
+    res.json(noteVersion);
+  } catch (error) {
+    console.error('Error fetching note version:', error);
+    res.status(500).json({ error: 'Failed to fetch note version' });
+  }
+});
+
+// Tag management endpoints
+app.post('/api/notes/:id/tags', async (req: Request, res: Response) => {
+  try {
+    const noteId = parseInt(req.params.id);
+    const { tagName, source } = req.body;
+
+    if (!tagName || !source) {
+      res.status(400).json({ error: 'tagName and source are required' });
+      return;
+    }
+
+    if (source !== 'AI' && source !== 'Self') {
+      res.status(400).json({ error: 'source must be either "AI" or "Self"' });
+      return;
+    }
+
+    const note = await addTagToNote(noteId, tagName, source);
+
+    if (!note) {
+      res.status(404).json({ error: 'Note not found' });
+      return;
+    }
+
+    res.json(note);
+  } catch (error) {
+    console.error('Error adding tag to note:', error);
+    res.status(500).json({ error: 'Failed to add tag to note' });
+  }
+});
+
+app.delete('/api/notes/:id/tags/:tagId', async (req: Request, res: Response) => {
+  try {
+    const noteId = parseInt(req.params.id);
+    const tagId = parseInt(req.params.tagId);
+
+    const note = await removeTagFromNote(noteId, tagId);
+
+    if (!note) {
+      res.status(404).json({ error: 'Note not found' });
+      return;
+    }
+
+    res.json(note);
+  } catch (error) {
+    console.error('Error removing tag from note:', error);
+    res.status(500).json({ error: 'Failed to remove tag from note' });
   }
 });
 

@@ -245,6 +245,7 @@ body {
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   transition: transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
 }
 
 .note-card:hover {
@@ -256,12 +257,22 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 0.5rem;
   margin-bottom: 0.75rem;
 }
 
 .note-date {
   font-size: 0.85rem;
   color: var(--text-muted);
+}
+
+.version-badge {
+  padding: 0.125rem 0.5rem;
+  background: #2a4a6a;
+  color: #7f9fdb;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
 .delete-btn {
@@ -294,11 +305,19 @@ body {
 
 .tag {
   padding: 0.25rem 0.75rem;
-  background: var(--tag-bg);
-  color: var(--tag-text);
   border-radius: 12px;
   font-size: 0.8rem;
   font-weight: 500;
+}
+
+.tag-ai {
+  background: #2a4a6a;
+  color: #7f9fdb;
+}
+
+.tag-self {
+  background: #4a6a2a;
+  color: #9fdb7f;
 }
 
 /* Mobile Responsive */

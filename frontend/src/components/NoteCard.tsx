@@ -3,9 +3,10 @@ import { Note } from '../types';
 interface NoteCardProps {
   note: Note;
   onDelete: (id: number) => void;
+  onEdit: (note: Note) => void;
 }
 
-export function NoteCard({ note, onDelete }: NoteCardProps) {
+export function NoteCard({ note, onDelete, onEdit }: NoteCardProps) {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -23,12 +24,18 @@ export function NoteCard({ note, onDelete }: NoteCardProps) {
   };
 
   return (
-    <div className="note-card">
+    <div className="note-card" onClick={() => onEdit(note)}>
       <div className="note-header">
         <span className="note-date">{formatDate(note.created_at)}</span>
+        {note.current_version && note.current_version > 1 && (
+          <span className="version-badge">v{note.current_version}</span>
+        )}
         <button
           className="delete-btn"
-          onClick={() => onDelete(note.id)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(note.id);
+          }}
           title="Delete note"
         >
           🗑️
@@ -38,7 +45,7 @@ export function NoteCard({ note, onDelete }: NoteCardProps) {
       {note.tags && note.tags.length > 0 && (
         <div className="note-tags">
           {note.tags.map((tag) => (
-            <span key={tag.id} className="tag">
+            <span key={tag.id} className={`tag tag-${tag.source.toLowerCase()}`} title={`Source: ${tag.source}`}>
               {tag.name}
             </span>
           ))}

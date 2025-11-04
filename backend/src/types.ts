@@ -3,12 +3,23 @@ export interface Note {
   content: string;
   created_at: Date;
   updated_at: Date;
+  current_version?: number;
   tags?: Tag[];
 }
 
 export interface Tag {
   id: number;
   name: string;
+  source: 'AI' | 'Self';
+}
+
+export interface NoteVersion {
+  id: number;
+  note_id: number;
+  version: number;
+  content: string;
+  created_at: Date;
+  tags?: Tag[];
 }
 
 export interface CreateNoteRequest {
@@ -17,7 +28,18 @@ export interface CreateNoteRequest {
 
 export interface UpdateNoteRequest {
   content?: string;
-  tags?: string[];
+  tags?: Array<{ name: string; source: 'AI' | 'Self' }>;
+}
+
+export interface AddTagRequest {
+  noteId: number;
+  tagName: string;
+  source: 'AI' | 'Self';
+}
+
+export interface RemoveTagRequest {
+  noteId: number;
+  tagId: number;
 }
 
 export interface NoteFilters {
