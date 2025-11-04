@@ -18,7 +18,7 @@ Tags:`;
     const response = await axios.post(
       `${OLLAMA_BASE_URL}/api/generate`,
       {
-        model: 'llama3.2:3b',
+        model: 'gpt-oss:120b-cloud',
         prompt,
         stream: false,
         options: {
@@ -27,7 +27,7 @@ Tags:`;
         },
       },
       {
-        timeout: 30000,
+        timeout: 60000, // 60 seconds for cloud model
       }
     );
 
