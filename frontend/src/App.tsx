@@ -4,6 +4,7 @@ import { NoteCard } from './components/NoteCard';
 import { NoteEditor } from './components/NoteEditor';
 import { FilterControls } from './components/FilterControls';
 import { TagSelector } from './components/TagSelector';
+import { TagManager } from './components/TagManager';
 import { Note, Tag, NoteFilters } from './types';
 import { createNote, getNotes, deleteNote, getAllTags, addTagToNote } from './api';
 import './App.css';
@@ -130,6 +131,14 @@ function App() {
         tags={tags}
         filters={filters}
         onFiltersChange={setFilters}
+      />
+
+      <TagManager
+        tags={tags}
+        onTagsChange={() => {
+          loadTags();
+          loadNotes();
+        }}
       />
 
       <main className="app-main">

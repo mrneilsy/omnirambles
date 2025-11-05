@@ -60,3 +60,18 @@ export async function removeTagFromNote(noteId: number, tagId: number): Promise<
   const response = await axios.delete(`${API_BASE}/notes/${noteId}/tags/${tagId}`);
   return response.data;
 }
+
+// Tag management API
+export async function createTag(name: string, source: 'Self'): Promise<Tag> {
+  const response = await axios.post(`${API_BASE}/tags`, { name, source });
+  return response.data;
+}
+
+export async function updateTag(id: number, name: string): Promise<Tag> {
+  const response = await axios.put(`${API_BASE}/tags/${id}`, { name });
+  return response.data;
+}
+
+export async function deleteTag(id: number): Promise<void> {
+  await axios.delete(`${API_BASE}/tags/${id}`);
+}

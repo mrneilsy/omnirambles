@@ -180,9 +180,77 @@ export async function deleteNote(id: number): Promise<boolean> {
 
 export async function getAllTags(): Promise<Tag[]> {
   const result = await pool.query(
-    'SELECT * FROM tags ORDER BY name ASC'
+    `SELECT t.id, t.name, t.source,
+      CAST(COUNT(DISTINCT nt.note_id) AS INTEGER) as note_count
+     FROM tags t
+     LEFT JOIN note_tags nt ON t.id = nt.tag_id
+     GROUP BY t.id, t.name, t.source
+     ORDER BY t.name ASC`
   );
   return result.rows;
+}
+
+export async function createTag(name: string, source: 'Self'): Promise<Tag> {
+  const result = await pool.query(
+    'INSERT INTO tags (name, source) VALUES ($1, $2) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING id, name, source',
+    [name.toLowerCase(), source]
+  );
+  const tag = result.rows[0];
+
+  // Get the count
+  const countResult = await pool.query(
+    'SELECT CAST(COUNT(DISTINCT note_id) AS INTEGER) as note_count FROM note_tags WHERE tag_id = $1',
+    [tag.id]
+  );
+
+  return {
+    ...tag,
+    note_count: countResult.rows[0].note_count
+  };
+}
+
+export async function updateTag(id: number, newName: string): Promise<Tag | null> {
+  const result = await pool.query(
+    'UPDATE tags SET name = $1 WHERE id = $2 RETURNING id, name, source',
+    [newName.toLowerCase(), id]
+  );
+
+  if (!result.rows[0]) return null;
+
+  const tag = result.rows[0];
+
+  // Get the count
+  const countResult = await pool.query(
+    'SELECT CAST(COUNT(DISTINCT note_id) AS INTEGER) as note_count FROM note_tags WHERE tag_id = $1',
+    [tag.id]
+  );
+
+  return {
+    ...tag,
+    note_count: countResult.rows[0].note_count
+  };
+}
+
+export async function deleteTag(id: number): Promise<boolean> {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Remove all note associations
+    await client.query('DELETE FROM note_tags WHERE tag_id = $1', [id]);
+    await client.query('DELETE FROM note_version_tags WHERE tag_id = $1', [id]);
+
+    // Delete the tag
+    const result = await client.query('DELETE FROM tags WHERE id = $1', [id]);
+
+    await client.query('COMMIT');
+    return result.rowCount ? result.rowCount > 0 : false;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 // Version history functions

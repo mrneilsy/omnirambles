@@ -671,6 +671,312 @@ body {
   cursor: not-allowed;
 }
 
+/* Tag Manager Button */
+.tag-manager-btn {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s;
+}
+
+.tag-manager-btn:hover {
+  background: var(--surface-hover);
+  border-color: var(--primary-color);
+}
+
+.tag-manager-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Tag Manager Overlay */
+.tag-manager-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 1001;
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Tag Manager Flyout */
+.tag-manager-flyout {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 500px;
+  max-width: 85vw;
+  background: var(--surface);
+  z-index: 1002;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.3s ease-out;
+  box-shadow: -4px 0 12px rgba(0, 0, 0, 0.4);
+}
+
+.tag-manager-flyout.open {
+  transform: translateX(0);
+}
+
+.tag-manager-flyout-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 2px solid var(--border);
+}
+
+.tag-manager-flyout-header h2 {
+  font-size: 1.5rem;
+  margin: 0;
+}
+
+.tag-manager-flyout-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.tag-manager-section {
+  margin-bottom: 1rem;
+}
+
+.tag-manager-section:last-child {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.tag-manager-section:last-child .tag-list {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 400px;
+}
+
+.tag-manager-section h3 {
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+  color: var(--text-secondary);
+}
+
+/* Add Tag Input */
+.tag-add-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.tag-input {
+  flex: 1;
+  padding: 0.75rem;
+  background: var(--background);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.tag-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+.tag-add-btn {
+  padding: 0.75rem 1.5rem;
+  background: var(--primary-color);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tag-add-btn:hover {
+  background: var(--secondary-color);
+}
+
+/* Tag List */
+.tag-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.tag-sort-select {
+  padding: 0.5rem 0.75rem;
+  background: var(--background);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.tag-sort-select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+.tag-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+
+.tag-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.65rem;
+  background: var(--background);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  transition: all 0.2s;
+  min-height: 48px;
+}
+
+.tag-item:hover {
+  border-color: var(--primary-color);
+}
+
+.tag-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.tag-name {
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+.tag-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  padding: 0.15rem 0.5rem;
+  background: var(--tag-bg);
+  color: var(--tag-text);
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.tag-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.tag-edit-btn,
+.tag-delete-btn {
+  padding: 0.5rem;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tag-edit-btn:hover {
+  color: var(--primary-color);
+}
+
+.tag-delete-btn:hover {
+  color: var(--error);
+}
+
+/* Edit Mode */
+.tag-item.editing {
+  grid-column: 1 / -1;
+}
+
+.tag-edit-row {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.tag-edit-input {
+  flex: 1;
+  padding: 0.6rem 0.75rem;
+  background: var(--surface);
+  border: 2px solid var(--primary-color);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.tag-edit-input:focus {
+  outline: none;
+  border-color: var(--secondary-color);
+}
+
+.tag-edit-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.tag-save-btn,
+.tag-cancel-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+.tag-save-btn {
+  background: var(--success);
+  color: white;
+}
+
+.tag-save-btn:hover {
+  background: #059669;
+}
+
+.tag-cancel-btn {
+  background: var(--error);
+  color: white;
+}
+
+.tag-cancel-btn:hover {
+  background: #dc2626;
+}
+
 /* Mobile Responsive */
 @media (max-width: 768px) {
   .app-header h1 {
@@ -702,8 +1008,55 @@ body {
     display: none;
   }
 
+  .tag-manager-btn {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+  }
+
+  .tag-manager-btn span {
+    display: none;
+  }
+
   .filter-flyout {
     width: 280px;
+  }
+
+  .tag-manager-flyout {
+    width: 400px;
+  }
+
+  .tag-list {
+    grid-template-columns: 1fr;
+  }
+
+  .tag-item {
+    padding: 0.4rem 0.5rem;
+    min-height: 40px;
+  }
+
+  .tag-name {
+    font-size: 0.85rem;
+  }
+
+  .tag-count {
+    font-size: 0.7rem;
+    min-width: 20px;
+    padding: 0.1rem 0.4rem;
+  }
+
+  .tag-edit-btn svg,
+  .tag-delete-btn svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .tag-edit-btn,
+  .tag-delete-btn {
+    padding: 0.35rem;
+  }
+
+  .tag-manager-section:last-child .tag-list {
+    min-height: 300px;
   }
 }
 
@@ -723,5 +1076,68 @@ body {
   .filter-flyout {
     width: 100%;
     max-width: 100vw;
+  }
+
+  .tag-manager-flyout {
+    width: 100%;
+    max-width: 100vw;
+  }
+
+  .tag-item {
+    padding: 0.35rem 0.45rem;
+    min-height: 36px;
+  }
+
+  .tag-name {
+    font-size: 0.8rem;
+  }
+
+  .tag-count {
+    font-size: 0.65rem;
+    min-width: 18px;
+    padding: 0.1rem 0.35rem;
+  }
+
+  .tag-edit-btn svg,
+  .tag-delete-btn svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .tag-edit-btn,
+  .tag-delete-btn {
+    padding: 0.3rem;
+  }
+
+  .tag-list {
+    gap: 0.4rem;
+  }
+
+  .tag-manager-section h3 {
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .tag-add-row {
+    gap: 0.4rem;
+  }
+
+  .tag-input {
+    padding: 0.6rem;
+    font-size: 0.85rem;
+  }
+
+  .tag-add-btn {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+  }
+
+  .tag-manager-section:last-child .tag-list {
+    min-height: 500px;
+  }
+
+  .tag-edit-input {
+    font-size: 0.9rem;
+    padding: 0.55rem 0.65rem;
   }
 }

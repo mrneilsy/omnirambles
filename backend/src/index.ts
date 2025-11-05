@@ -3,7 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { testConnection } from './db';
-import { createNote, getNotes, getNoteById, updateNote, deleteNote, getAllTags, getNoteVersions, getNoteVersion, addTagToNote, removeTagFromNote } from './notes';
+import { createNote, getNotes, getNoteById, updateNote, deleteNote, getAllTags, createTag, updateTag, deleteTag, getNoteVersions, getNoteVersion, addTagToNote, removeTagFromNote } from './notes';
 import { CreateNoteRequest, UpdateNoteRequest, NoteFilters } from './types';
 
 dotenv.config();
@@ -120,6 +120,69 @@ app.get('/api/tags', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error fetching tags:', error);
     res.status(500).json({ error: 'Failed to fetch tags' });
+  }
+});
+
+app.post('/api/tags', async (req: Request, res: Response) => {
+  try {
+    const { name, source } = req.body;
+
+    if (!name || name.trim().length === 0) {
+      res.status(400).json({ error: 'Tag name is required' });
+      return;
+    }
+
+    if (source !== 'Self') {
+      res.status(400).json({ error: 'source must be "Self"' });
+      return;
+    }
+
+    const tag = await createTag(name, source);
+    res.status(201).json(tag);
+  } catch (error) {
+    console.error('Error creating tag:', error);
+    res.status(500).json({ error: 'Failed to create tag' });
+  }
+});
+
+app.put('/api/tags/:id', async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { name } = req.body;
+
+    if (!name || name.trim().length === 0) {
+      res.status(400).json({ error: 'Tag name is required' });
+      return;
+    }
+
+    const tag = await updateTag(id, name);
+
+    if (!tag) {
+      res.status(404).json({ error: 'Tag not found' });
+      return;
+    }
+
+    res.json(tag);
+  } catch (error) {
+    console.error('Error updating tag:', error);
+    res.status(500).json({ error: 'Failed to update tag' });
+  }
+});
+
+app.delete('/api/tags/:id', async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    const deleted = await deleteTag(id);
+
+    if (!deleted) {
+      res.status(404).json({ error: 'Tag not found' });
+      return;
+    }
+
+    res.status(204).send();
+  } catch (error) {
+    console.error('Error deleting tag:', error);
+    res.status(500).json({ error: 'Failed to delete tag' });
   }
 });
 
