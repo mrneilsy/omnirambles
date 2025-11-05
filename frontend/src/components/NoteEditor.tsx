@@ -69,9 +69,9 @@ export function NoteEditor({ note, allTags, onClose, onUpdate }: NoteEditorProps
     setContent(note.content);
   };
 
-  const handleAddTag = async (tagName: string, source: 'AI' | 'Self') => {
+  const handleAddTag = async (tagName: string) => {
     try {
-      await addTagToNote(note.id, tagName, source);
+      await addTagToNote(note.id, tagName, 'Self');
       onUpdate();
       setShowTagDropdown(false);
       setNewTagInput('');
@@ -93,7 +93,7 @@ export function NoteEditor({ note, allTags, onClose, onUpdate }: NoteEditorProps
 
   const handleAddNewTag = () => {
     if (newTagInput.trim()) {
-      handleAddTag(newTagInput.trim().toLowerCase(), 'Self');
+      handleAddTag(newTagInput.trim().toLowerCase());
     }
   };
 
@@ -152,9 +152,8 @@ export function NoteEditor({ note, allTags, onClose, onUpdate }: NoteEditorProps
             <div className="current-tags">
               {note.tags && note.tags.length > 0 ? (
                 note.tags.map((tag) => (
-                  <span key={tag.id} className={`tag tag-${tag.source.toLowerCase()}`}>
+                  <span key={tag.id} className="tag tag-self">
                     {tag.name}
-                    <span className="tag-source">({tag.source})</span>
                     <button
                       className="tag-remove-btn"
                       onClick={() => handleRemoveTag(tag.id)}
@@ -187,9 +186,9 @@ export function NoteEditor({ note, allTags, onClose, onUpdate }: NoteEditorProps
                           <button
                             key={tag.id}
                             className="tag-option"
-                            onClick={() => handleAddTag(tag.name, tag.source)}
+                            onClick={() => handleAddTag(tag.name)}
                           >
-                            {tag.name} <span className="tag-source-label">({tag.source})</span>
+                            {tag.name}
                           </button>
                         ))
                       ) : (

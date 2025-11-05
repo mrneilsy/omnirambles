@@ -164,8 +164,8 @@ app.post('/api/notes/:id/tags', async (req: Request, res: Response) => {
       return;
     }
 
-    if (source !== 'AI' && source !== 'Self') {
-      res.status(400).json({ error: 'source must be either "AI" or "Self"' });
+    if (source !== 'Self') {
+      res.status(400).json({ error: 'source must be "Self"' });
       return;
     }
 

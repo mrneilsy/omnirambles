@@ -3,8 +3,9 @@ import { NoteForm } from './components/NoteForm';
 import { NoteCard } from './components/NoteCard';
 import { NoteEditor } from './components/NoteEditor';
 import { FilterControls } from './components/FilterControls';
+import { TagSelector } from './components/TagSelector';
 import { Note, Tag, NoteFilters } from './types';
-import { createNote, getNotes, deleteNote, getAllTags } from './api';
+import { createNote, getNotes, deleteNote, getAllTags, addTagToNote } from './api';
 import './App.css';
 
 function App() {
@@ -17,6 +18,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
+  const [newNoteForTagging, setNewNoteForTagging] = useState<Note | null>(null);
 
   // Load notes and tags
   useEffect(() => {
@@ -48,15 +50,45 @@ function App() {
     setIsLoading(true);
     setError(null);
     try {
-      await createNote(content);
+      // Create note
+      const newNote = await createNote(content);
       await loadNotes();
       await loadTags();
+      // Show tag selector for the newly created note
+      setNewNoteForTagging(newNote);
     } catch (err) {
       console.error('Error creating note:', err);
-      setError('Failed to create note. Make sure the backend and Ollama are running.');
+      setError('Failed to create note. Make sure the backend is running.');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSaveTags = async (selectedTags: string[], newTags: string[]) => {
+    if (!newNoteForTagging) return;
+
+    try {
+      // Add all selected existing tags
+      for (const tagName of selectedTags) {
+        await addTagToNote(newNoteForTagging.id, tagName, 'Self');
+      }
+
+      // Add all new tags
+      for (const tagName of newTags) {
+        await addTagToNote(newNoteForTagging.id, tagName, 'Self');
+      }
+
+      // Reload notes and tags
+      await loadNotes();
+      await loadTags();
+    } catch (err) {
+      console.error('Error saving tags:', err);
+      throw err;
+    }
+  };
+
+  const handleCloseTagSelector = () => {
+    setNewNoteForTagging(null);
   };
 
   const handleDeleteNote = async (id: number) => {
@@ -94,11 +126,6 @@ function App() {
 
   return (
     <div className="app">
-      <header className="app-header">
-        <h1>💭 OmniRambles</h1>
-        <p>AI-powered note taking with automatic categorization</p>
-      </header>
-
       <FilterControls
         tags={tags}
         filters={filters}
@@ -140,6 +167,14 @@ function App() {
           allTags={tags}
           onClose={handleCloseEditor}
           onUpdate={handleUpdateNote}
+        />
+      )}
+
+      {newNoteForTagging && (
+        <TagSelector
+          availableTags={tags}
+          onClose={handleCloseTagSelector}
+          onSave={handleSaveTags}
         />
       )}
     </div>
