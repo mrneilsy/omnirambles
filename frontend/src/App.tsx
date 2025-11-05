@@ -99,18 +99,16 @@ function App() {
         <p>AI-powered note taking with automatic categorization</p>
       </header>
 
+      <FilterControls
+        tags={tags}
+        filters={filters}
+        onFiltersChange={setFilters}
+      />
+
       <main className="app-main">
         <section className="note-input-section">
           <NoteForm onSubmit={handleCreateNote} isLoading={isLoading} />
           {error && <div className="error-message">{error}</div>}
-        </section>
-
-        <section className="filter-section">
-          <FilterControls
-            tags={tags}
-            filters={filters}
-            onFiltersChange={setFilters}
-          />
         </section>
 
         <section className="notes-section">
