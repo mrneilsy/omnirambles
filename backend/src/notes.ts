@@ -14,24 +14,28 @@ export async function createNote(data: CreateNoteRequest): Promise<Note> {
     );
     const note = noteResult.rows[0];
 
-    // Get AI-generated tags
-    const tagNames = await categorizeTags(data.content);
-
-    // Insert or get tags with AI source
     const tags: Tag[] = [];
-    for (const tagName of tagNames) {
-      const tagResult = await client.query(
-        'INSERT INTO tags (name, source) VALUES ($1, $2) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING *',
-        [tagName, 'AI']
-      );
-      const tag = tagResult.rows[0];
-      tags.push(tag);
 
-      // Link note to tag
-      await client.query(
-        'INSERT INTO note_tags (note_id, tag_id) VALUES ($1, $2)',
-        [note.id, tag.id]
-      );
+    // Only use AI tagging if not skipped
+    if (!data.skipAiTagging) {
+      // Get AI-generated tags
+      const tagNames = await categorizeTags(data.content);
+
+      // Insert or get tags with AI source
+      for (const tagName of tagNames) {
+        const tagResult = await client.query(
+          'INSERT INTO tags (name, source) VALUES ($1, $2) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING *',
+          [tagName, 'AI']
+        );
+        const tag = tagResult.rows[0];
+        tags.push(tag);
+
+        // Link note to tag
+        await client.query(
+          'INSERT INTO note_tags (note_id, tag_id) VALUES ($1, $2)',
+          [note.id, tag.id]
+        );
+      }
     }
 
     // Create version 1
