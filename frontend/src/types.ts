@@ -11,6 +11,7 @@ export interface Tag {
   id: number;
   name: string;
   source: 'Self';
+  note_count?: number;
 }
 
 export interface NoteVersion {
