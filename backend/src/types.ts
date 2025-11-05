@@ -24,7 +24,6 @@ export interface NoteVersion {
 
 export interface CreateNoteRequest {
   content: string;
-  skipAiTagging?: boolean;
 }
 
 export interface UpdateNoteRequest {

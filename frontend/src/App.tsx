@@ -50,8 +50,8 @@ function App() {
     setIsLoading(true);
     setError(null);
     try {
-      // Create note without AI tagging
-      const newNote = await createNote(content, true);
+      // Create note
+      const newNote = await createNote(content);
       await loadNotes();
       await loadTags();
       // Show tag selector for the newly created note
@@ -126,11 +126,6 @@ function App() {
 
   return (
     <div className="app">
-      <header className="app-header">
-        <h1>💭 OmniRambles</h1>
-        <p>AI-powered note taking with automatic categorization</p>
-      </header>
-
       <FilterControls
         tags={tags}
         filters={filters}

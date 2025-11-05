@@ -1,6 +1,5 @@
 import { pool } from './db';
 import { Note, Tag, NoteVersion, CreateNoteRequest, UpdateNoteRequest, NoteFilters } from './types';
-import { categorizeTags } from './ollama';
 
 export async function createNote(data: CreateNoteRequest): Promise<Note> {
   const client = await pool.connect();
@@ -14,51 +13,18 @@ export async function createNote(data: CreateNoteRequest): Promise<Note> {
     );
     const note = noteResult.rows[0];
 
-    const tags: Tag[] = [];
-
-    // Only use AI tagging if not skipped
-    if (!data.skipAiTagging) {
-      // Get AI-generated tags
-      const tagNames = await categorizeTags(data.content);
-
-      // Insert or get tags with AI source
-      for (const tagName of tagNames) {
-        const tagResult = await client.query(
-          'INSERT INTO tags (name, source) VALUES ($1, $2) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING *',
-          [tagName, 'AI']
-        );
-        const tag = tagResult.rows[0];
-        tags.push(tag);
-
-        // Link note to tag
-        await client.query(
-          'INSERT INTO note_tags (note_id, tag_id) VALUES ($1, $2)',
-          [note.id, tag.id]
-        );
-      }
-    }
-
     // Create version 1
     const versionResult = await client.query(
       'INSERT INTO note_versions (note_id, version, content) VALUES ($1, 1, $2) RETURNING *',
       [note.id, data.content]
     );
-    const version = versionResult.rows[0];
-
-    // Link tags to version
-    for (const tag of tags) {
-      await client.query(
-        'INSERT INTO note_version_tags (note_version_id, tag_id) VALUES ($1, $2)',
-        [version.id, tag.id]
-      );
-    }
 
     await client.query('COMMIT');
 
     return {
       ...note,
       current_version: 1,
-      tags,
+      tags: [],
     };
   } catch (error) {
     await client.query('ROLLBACK');

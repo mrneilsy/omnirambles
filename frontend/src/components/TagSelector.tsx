@@ -71,23 +71,6 @@ export function TagSelector({ availableTags, onClose, onSave }: TagSelectorProps
         </div>
 
         <div className="tag-selector-content">
-          {availableTags.length > 0 && (
-            <div className="tag-selector-section">
-              <h3>Existing Tags</h3>
-              <div className="tag-options">
-                {availableTags.map((tag) => (
-                  <button
-                    key={tag.id}
-                    className={`tag-option ${selectedTags.has(tag.name) ? 'selected' : ''}`}
-                    onClick={() => toggleTag(tag.name)}
-                  >
-                    {tag.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
           <div className="tag-selector-section">
             <h3>Add New Tag</h3>
             <div className="new-tag-input-group">
@@ -125,6 +108,23 @@ export function TagSelector({ availableTags, onClose, onSave }: TagSelectorProps
               </div>
             )}
           </div>
+
+          {availableTags.length > 0 && (
+            <div className="tag-selector-section">
+              <h3>Existing Tags</h3>
+              <div className="tag-options">
+                {availableTags.map((tag) => (
+                  <button
+                    key={tag.id}
+                    className={`tag-option ${selectedTags.has(tag.name) ? 'selected' : ''}`}
+                    onClick={() => toggleTag(tag.name)}
+                  >
+                    {tag.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="tag-selector-actions">

@@ -3,8 +3,8 @@ import { Note, Tag, NoteFilters, NoteVersion } from './types';
 
 const API_BASE = '/api';
 
-export async function createNote(content: string, skipAiTagging: boolean = false): Promise<Note> {
-  const response = await axios.post(`${API_BASE}/notes`, { content, skipAiTagging });
+export async function createNote(content: string): Promise<Note> {
+  const response = await axios.post(`${API_BASE}/notes`, { content });
   return response.data;
 }
 
