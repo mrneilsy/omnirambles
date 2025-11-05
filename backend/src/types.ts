@@ -10,7 +10,7 @@ export interface Note {
 export interface Tag {
   id: number;
   name: string;
-  source: 'AI' | 'Self';
+  source: 'Self';
 }
 
 export interface NoteVersion {
@@ -28,13 +28,13 @@ export interface CreateNoteRequest {
 
 export interface UpdateNoteRequest {
   content?: string;
-  tags?: Array<{ name: string; source: 'AI' | 'Self' }>;
+  tags?: Array<{ name: string; source: 'Self' }>;
 }
 
 export interface AddTagRequest {
   noteId: number;
   tagName: string;
-  source: 'AI' | 'Self';
+  source: 'Self';
 }
 
 export interface RemoveTagRequest {

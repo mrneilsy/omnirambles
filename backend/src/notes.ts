@@ -228,7 +228,7 @@ export async function getNoteVersion(noteId: number, version: number): Promise<N
 }
 
 // Tag management functions
-export async function addTagToNote(noteId: number, tagName: string, source: 'AI' | 'Self'): Promise<Note | null> {
+export async function addTagToNote(noteId: number, tagName: string, source: 'Self'): Promise<Note | null> {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');

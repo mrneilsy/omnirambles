@@ -10,7 +10,7 @@ export interface Note {
 export interface Tag {
   id: number;
   name: string;
-  source: 'AI' | 'Self';
+  source: 'Self';
 }
 
 export interface NoteVersion {
