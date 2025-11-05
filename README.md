@@ -1,17 +1,18 @@
-# OmniRambles - AI-Powered Note Taking App
+# OmniRambles - Note Taking App
 
-A modern note-taking application with AI-powered automatic categorization using Ollama. Take quick notes and let the AI organize them with relevant tags.
+A modern note-taking application with manual tagging. Take quick notes and organize them with your own tags.
 
 ## Features
 
 - **Plain Text Notes**: Simple, distraction-free note-taking
-- **AI Categorization**: Automatic tagging using Ollama (gpt-oss:120b-cloud)
+- **Manual Tagging**: Add tags through an intuitive tag selector modal
 - **Version History**: Track all edits with full version history (v1, v2, v3...)
 - **Enhanced Tag Management**:
-  - Add/remove tags manually or via AI
-  - Visual distinction between AI-generated (blue) and Self-created (green) tags
+  - Add/remove tags manually when saving notes
+  - Create new tags on-the-fly
   - Browse and reuse existing tags
-- **Smart Filtering**: Filter notes by tags
+  - Clean flyout panel for filtering by tags
+- **Smart Filtering**: Filter notes by tags using hamburger menu
 - **Flexible Sorting**: Sort by creation or update date
 - **Mobile Responsive**: Works seamlessly on mobile and desktop
 - **Modern Stack**: React + TypeScript + Node.js + PostgreSQL
@@ -30,33 +31,21 @@ A modern note-taking application with AI-powered automatic categorization using 
 - Express
 - TypeScript
 - PostgreSQL
-- Ollama Integration
 
 ### Infrastructure
 - PostgreSQL (Docker or standalone)
-- Ollama (gpt-oss:120b-cloud or llama3.2:3b)
 - Systemd (optional, for production deployment)
 
 ## Prerequisites
 
 - Node.js 18+ and npm
 - PostgreSQL (running locally, in Docker, or remotely)
-- Ollama (running locally or in Docker with gpt-oss:120b-cloud or llama3.2:3b model)
 
 ## Quick Start
 
-### 1. Ensure PostgreSQL and Ollama are Running
+### 1. Ensure PostgreSQL is Running
 
-Make sure you have:
-- PostgreSQL running and accessible (Docker, system service, etc.)
-- Ollama running with the llama3.2:3b model:
-  ```bash
-  # If running locally
-  ollama pull llama3.2:3b
-
-  # If running in Docker
-  docker exec -it <ollama-container> ollama pull llama3.2:3b
-  ```
+Make sure you have PostgreSQL running and accessible (Docker, system service, etc.)
 
 ### 2. Set Up Database
 
@@ -105,7 +94,7 @@ Create and configure `.env` file:
 cp .env.example .env
 ```
 
-Edit `.env` and update your PostgreSQL and Ollama settings:
+Edit `.env` and update your PostgreSQL settings:
 ```
 PORT=3001
 
@@ -115,13 +104,7 @@ DB_PORT=5432
 DB_NAME=omnirambles
 DB_USER=your_postgres_user
 DB_PASSWORD=your_password
-
-# Ollama Configuration
-# Update port if your Ollama runs on a different port
-OLLAMA_BASE_URL=http://localhost:11434
 ```
-
-**Note:** If your Ollama container runs on a different port (check with `docker ps`), update the `OLLAMA_BASE_URL` accordingly.
 
 Start the backend in development mode:
 
@@ -205,23 +188,27 @@ The app will be available at `http://localhost:3001` (backend serves frontend st
 1. Open the app in your browser:
    - Development: `http://localhost:5173` (frontend dev server)
    - Production: `http://localhost:3001` (systemd service)
-2. **Create a Note**: Type in the text area and click "Save Note"
-   - AI automatically analyzes and tags your note
+2. **Create a Note**:
+   - Type in the text area and click "Save Note"
+   - Tag selector modal appears automatically
+   - Create new tags or select from existing ones
+   - Click "Save Tags" or "Skip" to continue
 3. **Edit a Note**: Click any note card to open the editor
    - Modify content and click "Save as New Version" (creates v2, v3, etc.)
    - View previous versions by clicking version buttons (v1, v2, v3)
 4. **Manage Tags**:
-   - Click "+ Add Tag" to add tags manually
+   - Click "+ Add Tag" in the editor to add tags manually
    - Choose from existing tags or create new ones
-   - Tags are marked as "Self" (green) vs AI-generated (blue)
    - Click × to remove tags
-5. **Filter & Sort**: Use filter controls to filter by tags or sort by date
+5. **Filter & Sort**: Click the hamburger menu to open filter panel
+   - Filter by tags or sort by date
+   - Click "Apply Filters" to update the view
 6. **Delete Notes**: Click the trash icon on any note card
 
 ## API Endpoints
 
 ### Notes
-- `POST /api/notes` - Create a new note (with AI tagging, creates v1)
+- `POST /api/notes` - Create a new note (creates v1, no tags)
 - `GET /api/notes` - Get all notes (supports filtering and sorting)
 - `GET /api/notes/:id` - Get a specific note
 - `PUT /api/notes/:id` - Update a note (creates new version)
@@ -229,7 +216,7 @@ The app will be available at `http://localhost:3001` (backend serves frontend st
 
 ### Tags
 - `GET /api/tags` - Get all tags
-- `POST /api/notes/:id/tags` - Add a tag to a note (body: `{tagName, source: 'AI'|'Self'}`)
+- `POST /api/notes/:id/tags` - Add a tag to a note (body: `{tagName, source: 'Self'}`)
 - `DELETE /api/notes/:id/tags/:tagId` - Remove a tag from a note
 
 ### Version History
@@ -256,7 +243,7 @@ The app will be available at `http://localhost:3001` (backend serves frontend st
 **tags**
 - `id` - Serial primary key
 - `name` - Unique tag name (case-insensitive)
-- `source` - Tag origin: 'AI' or 'Self'
+- `source` - Tag origin: 'Self' (manual tags only)
 
 **note_tags**
 - `note_id` - Foreign key to notes
@@ -318,55 +305,7 @@ psql -U postgres -d omnirambles
 docker exec -it <postgres-container> psql -U <username> -d omnirambles
 ```
 
-### Ollama Access
-
-**Standalone Ollama:**
-```bash
-ollama list
-```
-
-**Docker Ollama:**
-```bash
-docker exec -it <ollama-container> ollama list
-```
-
 ## Troubleshooting
-
-### Ollama Not Responding
-
-If AI categorization isn't working:
-
-1. Check if Ollama is running:
-   ```bash
-   # Standalone
-   ollama list
-
-   # Docker
-   docker exec -it <ollama-container> ollama list
-   ```
-
-2. Verify the llama3.2:3b model is available:
-   ```bash
-   # Should show llama3.2:3b in the list
-   ollama list
-
-   # If not, pull it
-   ollama pull llama3.2:3b
-   ```
-
-3. Check Ollama port and test connection:
-   ```bash
-   # Check which port Ollama is using
-   docker ps | grep ollama
-
-   # Test Ollama (adjust port if needed)
-   curl http://localhost:11434/api/tags
-   ```
-
-4. Update backend/.env if Ollama is on a different port:
-   ```
-   OLLAMA_BASE_URL=http://localhost:11435  # or whatever port
-   ```
 
 ### Database Connection Issues
 
@@ -402,7 +341,6 @@ If ports are already in use, modify:
 - **Frontend** (default 5173): Change `port` in `frontend/vite.config.ts`
 - **Backend** (default 3001): Change `PORT` in `backend/.env`
 - **PostgreSQL** (default 5432): If using Docker, modify port mapping
-- **Ollama** (default 11434): Update `OLLAMA_BASE_URL` in `backend/.env` if different
 
 ## Mobile Access
 
@@ -434,29 +372,58 @@ The app is already configured for mobile/network access!
 │ (React UI)  │      │   (Vite)    │      │  (Express)   │
 └─────────────┘      └─────────────┘      └──────┬───────┘
                                                   │
-                                    ┌─────────────┴──────────┐
-                                    │                        │
-                              ┌─────▼──────┐        ┌───────▼────┐
-                              │ PostgreSQL │        │   Ollama   │
-                              │  Database  │        │  (AI Tags) │
-                              └────────────┘        └────────────┘
+                                                  ▼
+                                          ┌─────────────┐
+                                          │ PostgreSQL  │
+                                          │  Database   │
+                                          └─────────────┘
 ```
 
 ## Configuration Notes
 
-### Using Existing PostgreSQL/Ollama Instances
+### Using Existing PostgreSQL Instances
 
-This project is designed to work with existing PostgreSQL and Ollama instances:
-- No need for separate Docker Compose setup if you already have these services
+This project is designed to work with existing PostgreSQL instances:
+- No need for separate Docker Compose setup if you already have PostgreSQL
 - Simply configure the connection details in `backend/.env`
 - The app creates its own `omnirambles` database alongside your existing databases
-- Uses the llama3.2:3b model (lightweight, ~2GB)
 
 ### Performance
 
-- **Ollama Response Time**: AI tagging typically takes 2-5 seconds depending on your hardware
-- **Model Size**: llama3.2:3b requires ~2GB RAM
 - **Database**: PostgreSQL indexes ensure fast filtering and sorting even with thousands of notes
+- **Tag Management**: Manual tagging provides instant response with no AI processing delay
+
+## Past Features (Removed)
+
+### AI-Powered Automatic Categorization (Removed in dev/manual-tagging branch)
+
+**Why it was removed**: The AI auto-tagging feature was creating too many tags automatically, leading to tag proliferation and reduced control over organization.
+
+**What it did**:
+- Integrated with Ollama (gpt-oss:120b-cloud or llama3.2:3b models)
+- Automatically analyzed note content when saving
+- Generated 1-5 relevant tags using AI
+- Marked tags with 'AI' source vs 'Self' source
+- Visual distinction with blue badges for AI tags, green for manual tags
+- Required Ollama installation and configuration
+
+**What replaced it**:
+- **Manual Tag Selector Modal**: After saving a note, a modal appears prompting you to add tags
+- **Instant Response**: No AI processing delay
+- **Full Control**: Only tags you explicitly create are added
+- **Simpler Architecture**: No Ollama dependency
+- **Tag Creation On-the-Fly**: Create new tags right in the selector
+- **Existing Tag Reuse**: Browse and select from all existing tags
+
+**Technical Changes**:
+- Removed `ollama.ts` backend module
+- Removed `categorizeTags()` function and AI prompting logic
+- Changed tag source type from `'AI' | 'Self'` to `'Self'` only
+- Removed OLLAMA_BASE_URL configuration
+- Removed extraction and keyword fallback logic
+- Simplified note creation to not call AI services
+
+**Migration Note**: Existing AI-generated tags in the database remain but can be managed manually. All future tags are manual only.
 
 ## Future Enhancements
 
@@ -472,7 +439,6 @@ This project is designed to work with existing PostgreSQL and Ollama instances:
 - [ ] User authentication and multi-user support
 - [ ] Collaborative notes and sharing
 - [ ] Note pinning and favorites
-- [ ] Customizable AI prompts for tagging
 
 ## License
 
