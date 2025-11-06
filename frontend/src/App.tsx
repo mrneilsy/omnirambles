@@ -20,6 +20,8 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [newNoteForTagging, setNewNoteForTagging] = useState<Note | null>(null);
+  const [notesExpanded, setNotesExpanded] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
 
   // Load notes and tags
   useEffect(() => {
@@ -57,12 +59,21 @@ function App() {
       await loadTags();
       // Show tag selector for the newly created note
       setNewNoteForTagging(newNote);
+      setIsTyping(false);
     } catch (err) {
       console.error('Error creating note:', err);
       setError('Failed to create note. Make sure the backend is running.');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleNoteCancel = () => {
+    setIsTyping(false);
+  };
+
+  const handleNoteFocus = () => {
+    setIsTyping(true);
   };
 
   const handleSaveTags = async (selectedTags: string[], newTags: string[]) => {
@@ -127,47 +138,64 @@ function App() {
 
   return (
     <div className="app">
-      <FilterControls
-        tags={tags}
-        filters={filters}
-        onFiltersChange={setFilters}
-      />
-
-      <TagManager
-        tags={tags}
-        onTagsChange={() => {
-          loadTags();
-          loadNotes();
-        }}
-      />
-
       <main className="app-main">
-        <section className="note-input-section">
-          <NoteForm onSubmit={handleCreateNote} isLoading={isLoading} />
+        <section className={`note-input-section ${isTyping ? 'expanded' : ''}`}>
+          <NoteForm
+            onSubmit={handleCreateNote}
+            isLoading={isLoading}
+            onCancel={handleNoteCancel}
+            onFocus={handleNoteFocus}
+          />
           {error && <div className="error-message">{error}</div>}
         </section>
 
-        <section className="notes-section">
-          <h2>
-            Your Notes {notes.length > 0 && <span className="note-count">({notes.length})</span>}
-          </h2>
-          {notes.length === 0 ? (
-            <div className="empty-state">
-              <p>No notes yet. Start writing your first note above!</p>
+        {!isTyping && <section className="notes-section">
+          <div className="notes-section-header">
+            <div className="notes-section-title">
+              <button
+                className={`notes-toggle-btn ${notesExpanded ? 'expanded' : ''}`}
+                onClick={() => setNotesExpanded(!notesExpanded)}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+                Your Notes {notes.length > 0 && <span className="note-count">({notes.length})</span>}
+              </button>
             </div>
-          ) : (
-            <div className="notes-grid">
-              {notes.map((note) => (
-                <NoteCard
-                  key={note.id}
-                  note={note}
-                  onDelete={handleDeleteNote}
-                  onEdit={handleEditNote}
-                />
-              ))}
+            <div className="notes-actions">
+              <FilterControls
+                tags={tags}
+                filters={filters}
+                onFiltersChange={setFilters}
+              />
+              <TagManager
+                tags={tags}
+                onTagsChange={() => {
+                  loadTags();
+                  loadNotes();
+                }}
+              />
             </div>
-          )}
-        </section>
+          </div>
+          <div className={`notes-content ${notesExpanded ? 'expanded' : ''}`}>
+            {notes.length === 0 ? (
+              <div className="empty-state">
+                <p>No notes yet. Start writing your first note above!</p>
+              </div>
+            ) : (
+              <div className="notes-grid">
+                {notes.map((note) => (
+                  <NoteCard
+                    key={note.id}
+                    note={note}
+                    onDelete={handleDeleteNote}
+                    onEdit={handleEditNote}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </section>}
       </main>
 
       {editingNote && (
