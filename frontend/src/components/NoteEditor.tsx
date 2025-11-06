@@ -29,7 +29,9 @@ export function NoteEditor({ note, allTags, onClose, onUpdate }: NoteEditorProps
     setIsLoadingVersions(true);
     try {
       const fetchedVersions = await getNoteVersions(note.id);
-      setVersions(fetchedVersions);
+      // Sort versions newest to oldest
+      const sortedVersions = fetchedVersions.sort((a, b) => b.version - a.version);
+      setVersions(sortedVersions);
     } catch (err) {
       console.error('Error loading versions:', err);
       setError('Failed to load versions');

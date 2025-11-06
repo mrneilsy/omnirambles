@@ -105,12 +105,11 @@ export function TagManager({ tags, onTagsChange }: TagManagerProps) {
 
   return (
     <>
-      <button className="tag-manager-btn" onClick={openFlyout} aria-label="Tag Manager">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="3" />
-          <path d="M12 1v3m0 16v3M4.22 4.22l2.12 2.12m11.32 11.32l2.12 2.12M1 12h3m16 0h3M4.22 19.78l2.12-2.12m11.32-11.32l2.12-2.12" />
+      <button className="tags-fab" onClick={openFlyout} aria-label="Tag Manager">
+        <svg viewBox="0 0 24 24" fill="white" stroke="white" strokeWidth="2">
+          <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+          <line x1="7" y1="7" x2="7.01" y2="7" />
         </svg>
-        <span>Tags</span>
       </button>
 
       {isOpen && <div className="tag-manager-overlay" onClick={closeFlyout} />}
@@ -118,11 +117,8 @@ export function TagManager({ tags, onTagsChange }: TagManagerProps) {
       <div className={`tag-manager-flyout ${isOpen ? 'open' : ''}`}>
         <div className="tag-manager-flyout-header">
           <h2>Tag Manager</h2>
-          <button className="close-btn" onClick={closeFlyout} aria-label="Close tag manager">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
+          <button className="flyout-close-btn" onClick={closeFlyout} aria-label="Close tag manager">
+            ×
           </button>
         </div>
 

@@ -9,7 +9,8 @@
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: 1rem;
+  padding: 2rem 1rem;
+  overflow-y: auto;
 }
 
 .note-editor {
@@ -18,31 +19,38 @@
   border: 1px solid #333;
   width: 100%;
   max-width: 800px;
-  max-height: 90vh;
-  overflow: hidden;
+  max-height: calc(100vh - 4rem);
   display: flex;
   flex-direction: column;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  margin: auto;
 }
 
 .note-editor-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(100px, 1fr) auto auto;
   align-items: center;
-  justify-content: space-between;
   padding: 1.5rem;
   border-bottom: 1px solid #333;
+  flex-shrink: 0;
+  gap: 1rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .note-editor-header h2 {
   margin: 0;
   font-size: 1.5rem;
   color: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .version-info {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  white-space: nowrap;
 }
 
 .current-version,
@@ -51,6 +59,8 @@
   border-radius: 6px;
   font-size: 0.875rem;
   font-weight: 500;
+  white-space: nowrap;
+  display: inline-block;
 }
 
 .current-version {
@@ -86,21 +96,28 @@
   padding: 1.5rem;
   overflow-y: auto;
   flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .note-editor-textarea {
   width: 100%;
-  min-height: 200px;
-  padding: 1rem;
+  min-height: 250px;
+  max-height: 400px;
+  padding: 1.25rem;
   background: #0d0d0d;
   border: 1px solid #333;
   border-radius: 8px;
   color: #fff;
   font-family: inherit;
   font-size: 1rem;
-  line-height: 1.6;
+  line-height: 1.8;
   resize: vertical;
   margin-bottom: 1rem;
+  box-sizing: border-box;
+  overflow-y: auto;
+  scroll-padding-top: 0.5rem;
+  vertical-align: top;
 }
 
 .note-editor-textarea:focus {
@@ -435,6 +452,12 @@
 
   .note-editor-header {
     padding: 1rem;
+    grid-template-columns: auto auto auto;
+    grid-template-rows: auto;
+  }
+
+  .note-editor-header h2 {
+    font-size: 1.25rem;
   }
 
   .note-editor-body {

@@ -5,27 +5,34 @@ A modern note-taking application with manual tagging. Take quick notes and organ
 ## Features
 
 - **Streamlined Note-Taking Experience**:
-  - Floating Action Button (FAB) for quick note creation
+  - Three floating action buttons (FABs) for quick access: Filter, Tags, and New Note
   - Full-screen writing mode activates instantly
+  - Save/Cancel buttons always visible - no hidden UI
   - Clean, minimal interface - no clutter
   - Distraction-free focus on your content
-  - Notes hidden behind FAB button until you're ready to view them
 - **Manual Tagging**: Add tags through an intuitive tag selector modal
 - **Version History**: Track all edits with full version history (v1, v2, v3...)
   - Automatically returns to main screen after saving new versions
+  - Versions displayed newest to oldest
   - Clean version list without duplicate tag displays
+  - Optimized header layout prevents cutoff with growing version numbers
 - **Advanced Tag Management**:
   - Comprehensive tag manager with CRUD operations (create, rename, delete)
+  - Accessible via FAB button
   - Add/remove tags manually when saving notes
   - Create new tags on-the-fly
   - Browse and reuse existing tags
   - Sort tags alphabetically or by popularity
   - Tag usage counters
-  - Clean flyout panels for tag management and filtering
-- **Smart Filtering**: Filter notes by tags with intuitive flyout panel
-- **Always-Expanded Notes View**: Your notes are always visible when not writing
+  - Clean flyout panels with styled close buttons
+- **Smart Filtering**:
+  - Filter notes by tags via FAB button
+  - Intuitive flyout panel with styled close button
+- **Interactive Sort Controls**:
+  - Quick toggle between Created/Updated sorting
+  - Up/down arrow indicators for sort direction
+  - Note count display
 - **Compact Note Previews**: Each note shows maximum 4 lines in the list view
-- **Flexible Sorting**: Sort by creation or update date
 - **Mobile Responsive**: Optimized experience on mobile and desktop
 - **Modern Stack**: React + TypeScript + Node.js + PostgreSQL
 - **Systemd Service**: Run as a production system service
@@ -204,8 +211,9 @@ The app will be available at `http://localhost:3001` (backend serves frontend st
    - Network: `http://YOUR_IP:3001` (from mobile devices on same network)
 
 2. **Create a Note**:
-   - Click the blue floating action button (FAB) with the note icon
+   - Click the blue note icon FAB (rightmost floating button)
    - App instantly enters immersive full-screen writing mode
+   - Save and Cancel buttons are immediately visible
    - Type your note content in the large text area
    - Click "💾 Save Note" to save (tag selector appears automatically)
    - Click "✕ Cancel" to discard and return to main screen
@@ -215,29 +223,33 @@ The app will be available at `http://localhost:3001` (backend serves frontend st
 3. **View Your Notes**:
    - Your notes are always visible on the main screen
    - Each note shows up to 4 lines of preview text
-   - Count badge shows total number of notes
-   - Notes are automatically hidden when you start writing
+   - Use the "Created" or "Updated" buttons to toggle sort order
+   - Click a button to reverse the sort direction (up/down arrow shows direction)
+   - Note count displays next to sort buttons (e.g., "5 notes")
 
 4. **Edit a Note**:
    - Click any note card to open the editor
    - Modify content and click "Save as New Version" (creates v2, v3, etc.)
    - Automatically returns to main screen after saving
-   - View previous versions by clicking version buttons (v1, v2, v3)
+   - View previous versions by clicking version buttons
+   - Versions display newest to oldest (latest version first)
 
 5. **Manage Tags**:
-   - Click "Tags" button to open Tag Manager
+   - Click the tag icon FAB (middle floating button)
    - Add new tags with the text input
    - Rename tags by clicking the pencil icon
    - Delete tags by clicking the trash icon
    - Sort tags alphabetically or by popularity
    - View usage count for each tag
    - Or add tags in the note editor with "+ Add Tag"
+   - Click the red × button to close the tag manager
 
-6. **Filter & Sort**:
-   - Click "Filters" button to open filter panel
+6. **Filter Notes**:
+   - Click the filter icon FAB (leftmost floating button)
    - Filter by one or more tags
    - Sort by creation or update date (newest/oldest first)
    - Click "Apply Filters" to update the view
+   - Click the red × button to close the filter panel
 
 7. **Delete Notes**: Click the trash icon on any note card
 

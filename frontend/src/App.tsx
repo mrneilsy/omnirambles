@@ -149,34 +149,64 @@ function App() {
             {error && <div className="error-message">{error}</div>}
           </section>
         ) : (
-          <button className="new-note-fab" onClick={handleShowNoteEntry}>
-            <svg viewBox="0 0 24 24" fill="white" stroke="white" strokeWidth="2">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <polyline points="14 2 14 8 20 8" />
-              <line x1="12" y1="18" x2="12" y2="12" />
-              <line x1="9" y1="15" x2="15" y2="15" />
-            </svg>
-          </button>
+          <>
+            <FilterControls
+              tags={tags}
+              filters={filters}
+              onFiltersChange={setFilters}
+            />
+            <TagManager
+              tags={tags}
+              onTagsChange={() => {
+                loadTags();
+                loadNotes();
+              }}
+            />
+            <button className="new-note-fab" onClick={handleShowNoteEntry}>
+              <svg viewBox="0 0 24 24" fill="white" stroke="white" strokeWidth="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="12" y1="18" x2="12" y2="12" />
+                <line x1="9" y1="15" x2="15" y2="15" />
+              </svg>
+            </button>
+          </>
         )}
 
         {!isTyping && <section className="notes-section">
           <div className="notes-section-header">
-            <div className="notes-section-title">
-              <h2>Your Notes {notes.length > 0 && <span className="note-count">({notes.length})</span>}</h2>
-            </div>
-            <div className="notes-actions">
-              <FilterControls
-                tags={tags}
-                filters={filters}
-                onFiltersChange={setFilters}
-              />
-              <TagManager
-                tags={tags}
-                onTagsChange={() => {
-                  loadTags();
-                  loadNotes();
-                }}
-              />
+            <div className="sort-header">
+              <button
+                className={`sort-btn ${filters.sortBy === 'created_at' ? 'active' : ''}`}
+                onClick={() => setFilters({
+                  ...filters,
+                  sortBy: 'created_at',
+                  sortOrder: filters.sortBy === 'created_at' && filters.sortOrder === 'desc' ? 'asc' : 'desc'
+                })}
+              >
+                Created
+                {filters.sortBy === 'created_at' && (
+                  <svg viewBox="0 0 24 24" fill="currentColor" className={filters.sortOrder === 'asc' ? 'flip' : ''}>
+                    <path d="M7 10l5 5 5-5z"/>
+                  </svg>
+                )}
+              </button>
+              <button
+                className={`sort-btn ${filters.sortBy === 'updated_at' ? 'active' : ''}`}
+                onClick={() => setFilters({
+                  ...filters,
+                  sortBy: 'updated_at',
+                  sortOrder: filters.sortBy === 'updated_at' && filters.sortOrder === 'desc' ? 'asc' : 'desc'
+                })}
+              >
+                Updated
+                {filters.sortBy === 'updated_at' && (
+                  <svg viewBox="0 0 24 24" fill="currentColor" className={filters.sortOrder === 'asc' ? 'flip' : ''}>
+                    <path d="M7 10l5 5 5-5z"/>
+                  </svg>
+                )}
+              </button>
+              <span className="note-count">{notes.length} {notes.length === 1 ? 'note' : 'notes'}</span>
             </div>
           </div>
           <div className="notes-content expanded">

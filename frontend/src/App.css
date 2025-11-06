@@ -55,13 +55,14 @@ body {
   padding: 2rem 1rem;
 }
 
-/* New Note FAB */
-.new-note-fab {
+/* FAB Buttons */
+.new-note-fab,
+.filter-fab,
+.tags-fab {
   position: fixed;
   bottom: 2rem;
-  right: 2rem;
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
   background: var(--primary-color);
   border: none;
   border-radius: 50%;
@@ -74,15 +75,31 @@ body {
   z-index: 100;
 }
 
-.new-note-fab:hover {
+.new-note-fab {
+  right: 2rem;
+}
+
+.tags-fab {
+  right: calc(2rem + 56px + 1rem);
+}
+
+.filter-fab {
+  right: calc(2rem + 112px + 2rem);
+}
+
+.new-note-fab:hover,
+.filter-fab:hover,
+.tags-fab:hover {
   background: var(--secondary-color);
   transform: scale(1.1);
   box-shadow: 0 6px 16px rgba(99, 102, 241, 0.6);
 }
 
-.new-note-fab svg {
-  width: 32px;
-  height: 32px;
+.new-note-fab svg,
+.filter-fab svg,
+.tags-fab svg {
+  width: 28px;
+  height: 28px;
 }
 
 /* Note Form */
@@ -312,6 +329,28 @@ body {
   height: 24px;
 }
 
+.flyout-close-btn {
+  background: var(--error);
+  border: none;
+  color: white;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: bold;
+  line-height: 1;
+  transition: all 0.2s;
+}
+
+.flyout-close-btn:hover {
+  background: #dc2626;
+  transform: scale(1.1);
+}
+
 .filter-flyout-content {
   flex: 1;
   overflow-y: auto;
@@ -444,11 +483,50 @@ body {
 
 /* Notes Section */
 .notes-section-header {
+  margin-bottom: 1.5rem;
+}
+
+.sort-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 1.5rem;
   gap: 1rem;
+}
+
+.sort-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sort-btn:hover {
+  background: var(--surface-hover);
+  border-color: var(--primary-color);
+  color: var(--text-primary);
+}
+
+.sort-btn.active {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  color: white;
+}
+
+.sort-btn svg {
+  width: 20px;
+  height: 20px;
+  transition: transform 0.2s;
+}
+
+.sort-btn svg.flip {
+  transform: rotate(180deg);
 }
 
 .notes-section-title {

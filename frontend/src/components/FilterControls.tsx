@@ -57,13 +57,10 @@ export function FilterControls({ tags, filters, onFiltersChange }: FilterControl
 
   return (
     <>
-      <button className="hamburger-btn" onClick={openFlyout} aria-label="Open filters">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <line x1="3" y1="6" x2="21" y2="6" />
-          <line x1="3" y1="12" x2="21" y2="12" />
-          <line x1="3" y1="18" x2="21" y2="18" />
+      <button className="filter-fab" onClick={openFlyout} aria-label="Open filters">
+        <svg viewBox="0 0 24 24" fill="white" stroke="white" strokeWidth="2">
+          <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
         </svg>
-        <span>Filters</span>
       </button>
 
       {isOpen && <div className="filter-overlay" onClick={cancelFilters} />}
@@ -71,11 +68,8 @@ export function FilterControls({ tags, filters, onFiltersChange }: FilterControl
       <div className={`filter-flyout ${isOpen ? 'open' : ''}`}>
         <div className="filter-flyout-header">
           <h2>Filters</h2>
-          <button className="close-btn" onClick={cancelFilters} aria-label="Close filters">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
+          <button className="flyout-close-btn" onClick={cancelFilters} aria-label="Close filters">
+            ×
           </button>
         </div>
 
