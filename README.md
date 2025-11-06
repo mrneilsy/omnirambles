@@ -4,17 +4,25 @@ A modern note-taking application with manual tagging. Take quick notes and organ
 
 ## Features
 
-- **Plain Text Notes**: Simple, distraction-free note-taking
+- **Immersive Note-Taking Experience**:
+  - Full-screen writing mode when typing
+  - Clean interface - buttons appear only when needed
+  - Distraction-free focus on your content
+  - Prominent note entry dialog with ample vertical space
 - **Manual Tagging**: Add tags through an intuitive tag selector modal
 - **Version History**: Track all edits with full version history (v1, v2, v3...)
-- **Enhanced Tag Management**:
+- **Advanced Tag Management**:
+  - Comprehensive tag manager with CRUD operations (create, rename, delete)
   - Add/remove tags manually when saving notes
   - Create new tags on-the-fly
   - Browse and reuse existing tags
-  - Clean flyout panel for filtering by tags
-- **Smart Filtering**: Filter notes by tags using hamburger menu
+  - Sort tags alphabetically or by popularity
+  - Tag usage counters
+  - Clean flyout panels for tag management and filtering
+- **Smart Filtering**: Filter notes by tags with intuitive flyout panel
+- **Collapsible Notes View**: Hide/show your notes collection to focus on writing
 - **Flexible Sorting**: Sort by creation or update date
-- **Mobile Responsive**: Works seamlessly on mobile and desktop
+- **Mobile Responsive**: Optimized experience on mobile and desktop
 - **Modern Stack**: React + TypeScript + Node.js + PostgreSQL
 - **Systemd Service**: Run as a production system service
 
@@ -188,22 +196,43 @@ The app will be available at `http://localhost:3001` (backend serves frontend st
 1. Open the app in your browser:
    - Development: `http://localhost:5173` (frontend dev server)
    - Production: `http://localhost:3001` (systemd service)
+
 2. **Create a Note**:
-   - Type in the text area and click "Save Note"
-   - Tag selector modal appears automatically
-   - Create new tags or select from existing ones
+   - Click or tap in the note text area
+   - App enters immersive full-screen writing mode
+   - Save and Cancel buttons appear above the textarea
+   - Type your note content
+   - Click "💾 Save Note" to save (tag selector appears automatically)
+   - Click "✕ Cancel" to clear and exit writing mode
+   - After saving, select or create tags in the modal that appears
    - Click "Save Tags" or "Skip" to continue
-3. **Edit a Note**: Click any note card to open the editor
+
+3. **View Your Notes**:
+   - Click "▶ Your Notes" to expand/collapse the notes list
+   - Notes are hidden by default to keep focus on writing
+   - Count badge shows total number of notes
+
+4. **Edit a Note**:
+   - Click any note card to open the editor
    - Modify content and click "Save as New Version" (creates v2, v3, etc.)
    - View previous versions by clicking version buttons (v1, v2, v3)
-4. **Manage Tags**:
-   - Click "+ Add Tag" in the editor to add tags manually
-   - Choose from existing tags or create new ones
-   - Click × to remove tags
-5. **Filter & Sort**: Click the hamburger menu to open filter panel
-   - Filter by tags or sort by date
+
+5. **Manage Tags**:
+   - Click "Tags" button (next to Your Notes) to open Tag Manager
+   - Add new tags with the text input
+   - Rename tags by clicking the pencil icon
+   - Delete tags by clicking the trash icon
+   - Sort tags alphabetically or by popularity
+   - View usage count for each tag
+   - Or add tags in the note editor with "+ Add Tag"
+
+6. **Filter & Sort**:
+   - Click "Filters" button (next to Your Notes) to open filter panel
+   - Filter by one or more tags
+   - Sort by creation or update date (newest/oldest first)
    - Click "Apply Filters" to update the view
-6. **Delete Notes**: Click the trash icon on any note card
+
+7. **Delete Notes**: Click the trash icon on any note card
 
 ## API Endpoints
 
