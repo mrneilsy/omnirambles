@@ -4,19 +4,32 @@ A modern note-taking application with manual tagging. Take quick notes and organ
 
 ## Features
 
-- **Plain Text Notes**: Simple, distraction-free note-taking
+- **Streamlined Note-Taking Experience**:
+  - Floating Action Button (FAB) for quick note creation
+  - Full-screen writing mode activates instantly
+  - Clean, minimal interface - no clutter
+  - Distraction-free focus on your content
+  - Notes hidden behind FAB button until you're ready to view them
 - **Manual Tagging**: Add tags through an intuitive tag selector modal
 - **Version History**: Track all edits with full version history (v1, v2, v3...)
-- **Enhanced Tag Management**:
+  - Automatically returns to main screen after saving new versions
+  - Clean version list without duplicate tag displays
+- **Advanced Tag Management**:
+  - Comprehensive tag manager with CRUD operations (create, rename, delete)
   - Add/remove tags manually when saving notes
   - Create new tags on-the-fly
   - Browse and reuse existing tags
-  - Clean flyout panel for filtering by tags
-- **Smart Filtering**: Filter notes by tags using hamburger menu
+  - Sort tags alphabetically or by popularity
+  - Tag usage counters
+  - Clean flyout panels for tag management and filtering
+- **Smart Filtering**: Filter notes by tags with intuitive flyout panel
+- **Always-Expanded Notes View**: Your notes are always visible when not writing
+- **Compact Note Previews**: Each note shows maximum 4 lines in the list view
 - **Flexible Sorting**: Sort by creation or update date
-- **Mobile Responsive**: Works seamlessly on mobile and desktop
+- **Mobile Responsive**: Optimized experience on mobile and desktop
 - **Modern Stack**: React + TypeScript + Node.js + PostgreSQL
 - **Systemd Service**: Run as a production system service
+- **Network Access**: Backend configured to accept connections from local network
 
 ## Tech Stack
 
@@ -188,22 +201,45 @@ The app will be available at `http://localhost:3001` (backend serves frontend st
 1. Open the app in your browser:
    - Development: `http://localhost:5173` (frontend dev server)
    - Production: `http://localhost:3001` (systemd service)
+   - Network: `http://YOUR_IP:3001` (from mobile devices on same network)
+
 2. **Create a Note**:
-   - Type in the text area and click "Save Note"
-   - Tag selector modal appears automatically
-   - Create new tags or select from existing ones
-   - Click "Save Tags" or "Skip" to continue
-3. **Edit a Note**: Click any note card to open the editor
+   - Click the blue floating action button (FAB) with the note icon
+   - App instantly enters immersive full-screen writing mode
+   - Type your note content in the large text area
+   - Click "💾 Save Note" to save (tag selector appears automatically)
+   - Click "✕ Cancel" to discard and return to main screen
+   - After saving, select or create tags in the modal that appears
+   - Click "Save Tags" or "Skip" to return to the main screen
+
+3. **View Your Notes**:
+   - Your notes are always visible on the main screen
+   - Each note shows up to 4 lines of preview text
+   - Count badge shows total number of notes
+   - Notes are automatically hidden when you start writing
+
+4. **Edit a Note**:
+   - Click any note card to open the editor
    - Modify content and click "Save as New Version" (creates v2, v3, etc.)
+   - Automatically returns to main screen after saving
    - View previous versions by clicking version buttons (v1, v2, v3)
-4. **Manage Tags**:
-   - Click "+ Add Tag" in the editor to add tags manually
-   - Choose from existing tags or create new ones
-   - Click × to remove tags
-5. **Filter & Sort**: Click the hamburger menu to open filter panel
-   - Filter by tags or sort by date
+
+5. **Manage Tags**:
+   - Click "Tags" button to open Tag Manager
+   - Add new tags with the text input
+   - Rename tags by clicking the pencil icon
+   - Delete tags by clicking the trash icon
+   - Sort tags alphabetically or by popularity
+   - View usage count for each tag
+   - Or add tags in the note editor with "+ Add Tag"
+
+6. **Filter & Sort**:
+   - Click "Filters" button to open filter panel
+   - Filter by one or more tags
+   - Sort by creation or update date (newest/oldest first)
    - Click "Apply Filters" to update the view
-6. **Delete Notes**: Click the trash icon on any note card
+
+7. **Delete Notes**: Click the trash icon on any note card
 
 ## API Endpoints
 
@@ -357,12 +393,19 @@ The app is already configured for mobile/network access!
 
 2. Access from your mobile device:
    ```
+   # Development mode
    http://YOUR_IP:5173
+
+   # Production mode (systemd service)
+   http://YOUR_IP:3001
    ```
 
-   Example: `http://192.168.1.156:5173`
+   Example: `http://192.168.1.156:3001`
 
-**Note:** The `vite.config.ts` is already configured with `host: '0.0.0.0'` to allow network access. Make sure your firewall allows connections on port 5173.
+**Note:**
+- The `vite.config.ts` is configured with `host: '0.0.0.0'` for dev server network access
+- The backend is configured to listen on `0.0.0.0` for production network access
+- Make sure your firewall allows connections on the appropriate port
 
 ## Architecture
 

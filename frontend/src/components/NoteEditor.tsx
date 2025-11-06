@@ -51,6 +51,7 @@ export function NoteEditor({ note, allTags, onClose, onUpdate }: NoteEditorProps
       await loadVersions();
       setCurrentVersion(currentVersion + 1);
       onUpdate();
+      onClose();
     } catch (err) {
       console.error('Error saving note:', err);
       setError('Failed to save note');
@@ -242,15 +243,6 @@ export function NoteEditor({ note, allTags, onClose, onUpdate }: NoteEditorProps
                     <span className="version-date">
                       {new Date(version.created_at).toLocaleString()}
                     </span>
-                    {version.tags && version.tags.length > 0 && (
-                      <div className="version-tags">
-                        {version.tags.map((tag) => (
-                          <span key={tag.id} className="version-tag">
-                            {tag.name}
-                          </span>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>

@@ -274,8 +274,9 @@ app.get('*', (req: Request, res: Response) => {
 async function start() {
   try {
     await testConnection();
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on http://localhost:${PORT}`);
+    const port = typeof PORT === 'string' ? parseInt(PORT) : PORT;
+    app.listen(port, '0.0.0.0', () => {
+      console.log(`🚀 Server running on http://0.0.0.0:${port}`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);
