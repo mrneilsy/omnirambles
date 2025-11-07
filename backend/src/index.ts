@@ -2,39 +2,234 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
-import { testConnection } from './db';
+import session from 'express-session';
+import connectPgSimple from 'connect-pg-simple';
+import cookieParser from 'cookie-parser';
+import { testConnection, pool } from './db';
 import { createNote, getNotes, getNoteById, updateNote, deleteNote, getAllTags, createTag, updateTag, deleteTag, getNoteVersions, getNoteVersion, addTagToNote, removeTagFromNote } from './notes';
-import { CreateNoteRequest, UpdateNoteRequest, NoteFilters } from './types';
+import { CreateNoteRequest, UpdateNoteRequest, NoteFilters, RegisterRequest, LoginRequest, ChangePasswordRequest, ForgotPasswordRequest, ResetPasswordRequest } from './types';
+import { registerUser, authenticateUser, getUserById, changePassword, createPasswordResetToken, resetPassword, updateUserProfile, deleteUser } from './auth';
+import { requireAuth, loadUser } from './middleware/auth';
+import { securityHeaders, loginLimiter, registerLimiter, passwordResetLimiter, apiLimiter, writeLimiter } from './middleware/security';
+import { handleValidationErrors, validateRegistration, validateLogin, validateChangePassword, validateForgotPassword, validateResetPassword, validateNoteCreation, validateNoteUpdate, validateNoteId, validateTagCreation, validateTagUpdate, validateTagId, validateAddTagToNote, validateNoteFilters } from './middleware/validation';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const PgSession = connectPgSimple(session);
 
-// Middleware
-app.use(cors());
+// ============================================================================
+// Middleware Stack
+// ============================================================================
+
+// Security headers
+app.use(securityHeaders);
+
+// Cookie parser (required for session)
+app.use(cookieParser());
+
+// CORS configuration
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// Body parser
 app.use(express.json());
+
+// Session configuration
+app.use(
+  session({
+    store: new PgSession({
+      pool: pool,
+      tableName: 'session',
+      createTableIfMissing: false,
+    }),
+    secret: process.env.SESSION_SECRET || 'your-secret-key-change-this-in-production',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      maxAge: parseInt(process.env.SESSION_TIMEOUT || '86400000'), // 24 hours
+      sameSite: 'strict',
+    },
+    name: 'omnirambles.sid',
+  })
+);
+
+// Load user from session
+app.use(loadUser);
 
 // Serve frontend static files in production
 const frontendDistPath = path.join(__dirname, '../../frontend/dist');
 app.use(express.static(frontendDistPath));
 
-// Health check endpoint
+// ============================================================================
+// Health Check Endpoint (Public)
+// ============================================================================
+
 app.get('/api/health', (req: Request, res: Response) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    authenticated: !!req.user
+  });
 });
 
-// Notes endpoints
-app.post('/api/notes', async (req: Request, res: Response) => {
-  try {
-    const data: CreateNoteRequest = req.body;
+// ============================================================================
+// Authentication Endpoints
+// ============================================================================
 
-    if (!data.content || data.content.trim().length === 0) {
-      res.status(400).json({ error: 'Note content is required' });
+// Register new user
+app.post('/api/auth/register', registerLimiter, validateRegistration, handleValidationErrors, async (req: Request, res: Response) => {
+  try {
+    const data: RegisterRequest = req.body;
+    const user = await registerUser(data);
+
+    // Auto-login after registration
+    req.session.userId = user.id;
+    req.session.user = user;
+
+    res.status(201).json({ user });
+  } catch (error) {
+    console.error('Error registering user:', error);
+    const message = error instanceof Error ? error.message : 'Failed to register user';
+    res.status(400).json({ error: message });
+  }
+});
+
+// Login user
+app.post('/api/auth/login', loginLimiter, validateLogin, handleValidationErrors, async (req: Request, res: Response) => {
+  try {
+    const data: LoginRequest = req.body;
+    const user = await authenticateUser(data);
+
+    // Create session
+    req.session.userId = user.id;
+    req.session.user = user;
+
+    res.json({ user });
+  } catch (error) {
+    console.error('Error logging in:', error);
+    const message = error instanceof Error ? error.message : 'Failed to log in';
+    res.status(401).json({ error: message });
+  }
+});
+
+// Logout user
+app.post('/api/auth/logout', requireAuth, async (req: Request, res: Response) => {
+  req.session.destroy((err) => {
+    if (err) {
+      console.error('Error destroying session:', err);
+      res.status(500).json({ error: 'Failed to log out' });
       return;
     }
+    res.clearCookie('omnirambles.sid');
+    res.json({ message: 'Logged out successfully' });
+  });
+});
 
-    const note = await createNote(data);
+// Get current user
+app.get('/api/auth/me', requireAuth, async (req: Request, res: Response) => {
+  res.json({ user: req.user });
+});
+
+// Change password
+app.post('/api/auth/change-password', requireAuth, validateChangePassword, handleValidationErrors, async (req: Request, res: Response) => {
+  try {
+    const data: ChangePasswordRequest = req.body;
+    await changePassword(req.user!.id, data.currentPassword, data.newPassword);
+    res.json({ message: 'Password changed successfully' });
+  } catch (error) {
+    console.error('Error changing password:', error);
+    const message = error instanceof Error ? error.message : 'Failed to change password';
+    res.status(400).json({ error: message });
+  }
+});
+
+// Request password reset
+app.post('/api/auth/forgot-password', passwordResetLimiter, validateForgotPassword, handleValidationErrors, async (req: Request, res: Response) => {
+  try {
+    const data: ForgotPasswordRequest = req.body;
+    const token = await createPasswordResetToken(data.email);
+
+    // TODO: Send email with reset link
+    // For now, return token in response (REMOVE THIS IN PRODUCTION!)
+    if (process.env.NODE_ENV !== 'production') {
+      res.json({
+        message: 'Password reset link sent to email',
+        token: token // DEV ONLY - remove in production
+      });
+    } else {
+      res.json({ message: 'If the email exists, a reset link has been sent' });
+    }
+  } catch (error) {
+    console.error('Error requesting password reset:', error);
+    res.json({ message: 'If the email exists, a reset link has been sent' });
+  }
+});
+
+// Reset password with token
+app.post('/api/auth/reset-password', passwordResetLimiter, validateResetPassword, handleValidationErrors, async (req: Request, res: Response) => {
+  try {
+    const data: ResetPasswordRequest = req.body;
+    await resetPassword(data.token, data.newPassword);
+    res.json({ message: 'Password reset successfully' });
+  } catch (error) {
+    console.error('Error resetting password:', error);
+    const message = error instanceof Error ? error.message : 'Failed to reset password';
+    res.status(400).json({ error: message });
+  }
+});
+
+// Update user profile
+app.put('/api/auth/profile', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { email, username } = req.body;
+    const user = await updateUserProfile(req.user!.id, { email, username });
+
+    // Update session
+    req.session.user = user;
+
+    res.json({ user });
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    const message = error instanceof Error ? error.message : 'Failed to update profile';
+    res.status(400).json({ error: message });
+  }
+});
+
+// Delete account
+app.delete('/api/auth/account', requireAuth, async (req: Request, res: Response) => {
+  try {
+    await deleteUser(req.user!.id);
+
+    req.session.destroy((err) => {
+      if (err) {
+        console.error('Error destroying session:', err);
+      }
+      res.clearCookie('omnirambles.sid');
+      res.json({ message: 'Account deleted successfully' });
+    });
+  } catch (error) {
+    console.error('Error deleting account:', error);
+    res.status(500).json({ error: 'Failed to delete account' });
+  }
+});
+
+// ============================================================================
+// Notes Endpoints (Protected)
+// ============================================================================
+
+// Create note
+app.post('/api/notes', requireAuth, apiLimiter, writeLimiter, validateNoteCreation, handleValidationErrors, async (req: Request, res: Response) => {
+  try {
+    const data: CreateNoteRequest = req.body;
+    const note = await createNote(req.user!.id, data);
     res.status(201).json(note);
   } catch (error) {
     console.error('Error creating note:', error);
@@ -42,7 +237,8 @@ app.post('/api/notes', async (req: Request, res: Response) => {
   }
 });
 
-app.get('/api/notes', async (req: Request, res: Response) => {
+// Get all notes (with filters)
+app.get('/api/notes', requireAuth, apiLimiter, validateNoteFilters, handleValidationErrors, async (req: Request, res: Response) => {
   try {
     const filters: NoteFilters = {
       tags: req.query.tags ? (req.query.tags as string).split(',') : undefined,
@@ -52,7 +248,7 @@ app.get('/api/notes', async (req: Request, res: Response) => {
       offset: req.query.offset ? parseInt(req.query.offset as string) : undefined,
     };
 
-    const notes = await getNotes(filters);
+    const notes = await getNotes(req.user!.id, filters);
     res.json(notes);
   } catch (error) {
     console.error('Error fetching notes:', error);
@@ -60,10 +256,11 @@ app.get('/api/notes', async (req: Request, res: Response) => {
   }
 });
 
-app.get('/api/notes/:id', async (req: Request, res: Response) => {
+// Get single note
+app.get('/api/notes/:id', requireAuth, apiLimiter, validateNoteId, handleValidationErrors, async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
-    const note = await getNoteById(id);
+    const note = await getNoteById(req.user!.id, id);
 
     if (!note) {
       res.status(404).json({ error: 'Note not found' });
@@ -77,12 +274,13 @@ app.get('/api/notes/:id', async (req: Request, res: Response) => {
   }
 });
 
-app.put('/api/notes/:id', async (req: Request, res: Response) => {
+// Update note
+app.put('/api/notes/:id', requireAuth, apiLimiter, writeLimiter, validateNoteUpdate, handleValidationErrors, async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
     const data: UpdateNoteRequest = req.body;
 
-    const note = await updateNote(id, data);
+    const note = await updateNote(req.user!.id, id, data);
 
     if (!note) {
       res.status(404).json({ error: 'Note not found' });
@@ -96,10 +294,11 @@ app.put('/api/notes/:id', async (req: Request, res: Response) => {
   }
 });
 
-app.delete('/api/notes/:id', async (req: Request, res: Response) => {
+// Delete note
+app.delete('/api/notes/:id', requireAuth, apiLimiter, writeLimiter, validateNoteId, handleValidationErrors, async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
-    const deleted = await deleteNote(id);
+    const deleted = await deleteNote(req.user!.id, id);
 
     if (!deleted) {
       res.status(404).json({ error: 'Note not found' });
@@ -113,9 +312,14 @@ app.delete('/api/notes/:id', async (req: Request, res: Response) => {
   }
 });
 
-app.get('/api/tags', async (req: Request, res: Response) => {
+// ============================================================================
+// Tags Endpoints (Protected)
+// ============================================================================
+
+// Get all tags
+app.get('/api/tags', requireAuth, apiLimiter, async (req: Request, res: Response) => {
   try {
-    const tags = await getAllTags();
+    const tags = await getAllTags(req.user!.id);
     res.json(tags);
   } catch (error) {
     console.error('Error fetching tags:', error);
@@ -123,21 +327,11 @@ app.get('/api/tags', async (req: Request, res: Response) => {
   }
 });
 
-app.post('/api/tags', async (req: Request, res: Response) => {
+// Create tag
+app.post('/api/tags', requireAuth, apiLimiter, writeLimiter, validateTagCreation, handleValidationErrors, async (req: Request, res: Response) => {
   try {
     const { name, source } = req.body;
-
-    if (!name || name.trim().length === 0) {
-      res.status(400).json({ error: 'Tag name is required' });
-      return;
-    }
-
-    if (source !== 'Self') {
-      res.status(400).json({ error: 'source must be "Self"' });
-      return;
-    }
-
-    const tag = await createTag(name, source);
+    const tag = await createTag(req.user!.id, name, source);
     res.status(201).json(tag);
   } catch (error) {
     console.error('Error creating tag:', error);
@@ -145,17 +339,13 @@ app.post('/api/tags', async (req: Request, res: Response) => {
   }
 });
 
-app.put('/api/tags/:id', async (req: Request, res: Response) => {
+// Update tag
+app.put('/api/tags/:id', requireAuth, apiLimiter, writeLimiter, validateTagUpdate, handleValidationErrors, async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
     const { name } = req.body;
 
-    if (!name || name.trim().length === 0) {
-      res.status(400).json({ error: 'Tag name is required' });
-      return;
-    }
-
-    const tag = await updateTag(id, name);
+    const tag = await updateTag(req.user!.id, id, name);
 
     if (!tag) {
       res.status(404).json({ error: 'Tag not found' });
@@ -169,10 +359,11 @@ app.put('/api/tags/:id', async (req: Request, res: Response) => {
   }
 });
 
-app.delete('/api/tags/:id', async (req: Request, res: Response) => {
+// Delete tag
+app.delete('/api/tags/:id', requireAuth, apiLimiter, writeLimiter, validateTagId, handleValidationErrors, async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id);
-    const deleted = await deleteTag(id);
+    const deleted = await deleteTag(req.user!.id, id);
 
     if (!deleted) {
       res.status(404).json({ error: 'Tag not found' });
@@ -186,11 +377,15 @@ app.delete('/api/tags/:id', async (req: Request, res: Response) => {
   }
 });
 
-// Version history endpoints
-app.get('/api/notes/:id/versions', async (req: Request, res: Response) => {
+// ============================================================================
+// Version History Endpoints (Protected)
+// ============================================================================
+
+// Get all versions of a note
+app.get('/api/notes/:id/versions', requireAuth, apiLimiter, validateNoteId, handleValidationErrors, async (req: Request, res: Response) => {
   try {
     const noteId = parseInt(req.params.id);
-    const versions = await getNoteVersions(noteId);
+    const versions = await getNoteVersions(req.user!.id, noteId);
     res.json(versions);
   } catch (error) {
     console.error('Error fetching note versions:', error);
@@ -198,11 +393,12 @@ app.get('/api/notes/:id/versions', async (req: Request, res: Response) => {
   }
 });
 
-app.get('/api/notes/:id/versions/:version', async (req: Request, res: Response) => {
+// Get specific version of a note
+app.get('/api/notes/:id/versions/:version', requireAuth, apiLimiter, async (req: Request, res: Response) => {
   try {
     const noteId = parseInt(req.params.id);
     const version = parseInt(req.params.version);
-    const noteVersion = await getNoteVersion(noteId, version);
+    const noteVersion = await getNoteVersion(req.user!.id, noteId, version);
 
     if (!noteVersion) {
       res.status(404).json({ error: 'Version not found' });
@@ -216,23 +412,17 @@ app.get('/api/notes/:id/versions/:version', async (req: Request, res: Response) 
   }
 });
 
-// Tag management endpoints
-app.post('/api/notes/:id/tags', async (req: Request, res: Response) => {
+// ============================================================================
+// Note-Tag Management Endpoints (Protected)
+// ============================================================================
+
+// Add tag to note
+app.post('/api/notes/:id/tags', requireAuth, apiLimiter, writeLimiter, validateAddTagToNote, handleValidationErrors, async (req: Request, res: Response) => {
   try {
     const noteId = parseInt(req.params.id);
     const { tagName, source } = req.body;
 
-    if (!tagName || !source) {
-      res.status(400).json({ error: 'tagName and source are required' });
-      return;
-    }
-
-    if (source !== 'Self') {
-      res.status(400).json({ error: 'source must be "Self"' });
-      return;
-    }
-
-    const note = await addTagToNote(noteId, tagName, source);
+    const note = await addTagToNote(req.user!.id, noteId, tagName, source);
 
     if (!note) {
       res.status(404).json({ error: 'Note not found' });
@@ -246,12 +436,13 @@ app.post('/api/notes/:id/tags', async (req: Request, res: Response) => {
   }
 });
 
-app.delete('/api/notes/:id/tags/:tagId', async (req: Request, res: Response) => {
+// Remove tag from note
+app.delete('/api/notes/:id/tags/:tagId', requireAuth, apiLimiter, writeLimiter, async (req: Request, res: Response) => {
   try {
     const noteId = parseInt(req.params.id);
     const tagId = parseInt(req.params.tagId);
 
-    const note = await removeTagFromNote(noteId, tagId);
+    const note = await removeTagFromNote(req.user!.id, noteId, tagId);
 
     if (!note) {
       res.status(404).json({ error: 'Note not found' });

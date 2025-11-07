@@ -1,15 +1,15 @@
 import { pool } from './db';
 import { Note, Tag, NoteVersion, CreateNoteRequest, UpdateNoteRequest, NoteFilters } from './types';
 
-export async function createNote(data: CreateNoteRequest): Promise<Note> {
+export async function createNote(userId: number, data: CreateNoteRequest): Promise<Note> {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
-    // Insert note
+    // Insert note with user_id
     const noteResult = await client.query(
-      'INSERT INTO notes (content) VALUES ($1) RETURNING *',
-      [data.content]
+      'INSERT INTO notes (content, user_id) VALUES ($1, $2) RETURNING *',
+      [data.content, userId]
     );
     const note = noteResult.rows[0];
 
@@ -34,7 +34,7 @@ export async function createNote(data: CreateNoteRequest): Promise<Note> {
   }
 }
 
-export async function getNotes(filters: NoteFilters = {}): Promise<Note[]> {
+export async function getNotes(userId: number, filters: NoteFilters = {}): Promise<Note[]> {
   const {
     tags = [],
     sortBy = 'created_at',
@@ -43,8 +43,8 @@ export async function getNotes(filters: NoteFilters = {}): Promise<Note[]> {
     offset = 0,
   } = filters;
 
-  const params: any[] = [];
-  const conditions: string[] = [];
+  const params: any[] = [userId];
+  const conditions: string[] = ['n.user_id = $1'];
 
   let query = `
     SELECT n.*,
@@ -64,15 +64,16 @@ export async function getNotes(filters: NoteFilters = {}): Promise<Note[]> {
   // Add tag filtering if needed
   if (tags.length > 0) {
     params.push(tags);
-    query += `
-    WHERE n.id IN (
+    conditions.push(`n.id IN (
       SELECT DISTINCT nt.note_id
       FROM note_tags nt
       JOIN tags t ON nt.tag_id = t.id
       WHERE t.name = ANY($${params.length})
-    )`;
+        AND t.user_id = $1
+    )`);
   }
 
+  query += ` WHERE ${conditions.join(' AND ')}`;
   query += ` GROUP BY n.id`;
   query += ` ORDER BY n.${sortBy} ${sortOrder.toUpperCase()}`;
   query += ` LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
@@ -83,7 +84,7 @@ export async function getNotes(filters: NoteFilters = {}): Promise<Note[]> {
   return result.rows;
 }
 
-export async function getNoteById(id: number): Promise<Note | null> {
+export async function getNoteById(userId: number, id: number): Promise<Note | null> {
   const result = await pool.query(
     `
     SELECT n.*,
@@ -98,19 +99,29 @@ export async function getNoteById(id: number): Promise<Note | null> {
       ) as tags
     FROM notes n
     LEFT JOIN note_versions nv ON n.id = nv.note_id
-    WHERE n.id = $1
+    WHERE n.id = $1 AND n.user_id = $2
     GROUP BY n.id
     `,
-    [id]
+    [id, userId]
   );
 
   return result.rows[0] || null;
 }
 
-export async function updateNote(id: number, data: UpdateNoteRequest): Promise<Note | null> {
+export async function updateNote(userId: number, id: number, data: UpdateNoteRequest): Promise<Note | null> {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+
+    // Verify note belongs to user
+    const ownerCheck = await client.query(
+      'SELECT user_id FROM notes WHERE id = $1',
+      [id]
+    );
+    if (ownerCheck.rows.length === 0 || ownerCheck.rows[0].user_id !== userId) {
+      await client.query('ROLLBACK');
+      return null;
+    }
 
     // If content is being updated, create a new version
     if (data.content !== undefined) {
@@ -123,8 +134,8 @@ export async function updateNote(id: number, data: UpdateNoteRequest): Promise<N
 
       // Update note content
       await client.query(
-        'UPDATE notes SET content = $1 WHERE id = $2',
-        [data.content, id]
+        'UPDATE notes SET content = $1 WHERE id = $2 AND user_id = $3',
+        [data.content, id, userId]
       );
 
       // Create new version
@@ -147,11 +158,11 @@ export async function updateNote(id: number, data: UpdateNoteRequest): Promise<N
       // Remove existing tag associations
       await client.query('DELETE FROM note_tags WHERE note_id = $1', [id]);
 
-      // Add new tags
+      // Add new tags (ensure they belong to the user)
       for (const tagData of data.tags) {
         const tagResult = await client.query(
-          'INSERT INTO tags (name, source) VALUES ($1, $2) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING *',
-          [tagData.name.toLowerCase(), tagData.source]
+          'INSERT INTO tags (name, source, user_id) VALUES ($1, $2, $3) ON CONFLICT (name, user_id) DO UPDATE SET name = EXCLUDED.name RETURNING *',
+          [tagData.name.toLowerCase(), tagData.source, userId]
         );
         const tag = tagResult.rows[0];
 
@@ -164,7 +175,7 @@ export async function updateNote(id: number, data: UpdateNoteRequest): Promise<N
 
     await client.query('COMMIT');
 
-    return await getNoteById(id);
+    return await getNoteById(userId, id);
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
@@ -173,27 +184,29 @@ export async function updateNote(id: number, data: UpdateNoteRequest): Promise<N
   }
 }
 
-export async function deleteNote(id: number): Promise<boolean> {
-  const result = await pool.query('DELETE FROM notes WHERE id = $1', [id]);
+export async function deleteNote(userId: number, id: number): Promise<boolean> {
+  const result = await pool.query('DELETE FROM notes WHERE id = $1 AND user_id = $2', [id, userId]);
   return result.rowCount ? result.rowCount > 0 : false;
 }
 
-export async function getAllTags(): Promise<Tag[]> {
+export async function getAllTags(userId: number): Promise<Tag[]> {
   const result = await pool.query(
     `SELECT t.id, t.name, t.source,
       CAST(COUNT(DISTINCT nt.note_id) AS INTEGER) as note_count
      FROM tags t
      LEFT JOIN note_tags nt ON t.id = nt.tag_id
+     WHERE t.user_id = $1
      GROUP BY t.id, t.name, t.source
-     ORDER BY t.name ASC`
+     ORDER BY t.name ASC`,
+    [userId]
   );
   return result.rows;
 }
 
-export async function createTag(name: string, source: 'Self'): Promise<Tag> {
+export async function createTag(userId: number, name: string, source: 'Self'): Promise<Tag> {
   const result = await pool.query(
-    'INSERT INTO tags (name, source) VALUES ($1, $2) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING id, name, source',
-    [name.toLowerCase(), source]
+    'INSERT INTO tags (name, source, user_id) VALUES ($1, $2, $3) ON CONFLICT (name, user_id) DO UPDATE SET name = EXCLUDED.name RETURNING id, name, source',
+    [name.toLowerCase(), source, userId]
   );
   const tag = result.rows[0];
 
@@ -209,10 +222,10 @@ export async function createTag(name: string, source: 'Self'): Promise<Tag> {
   };
 }
 
-export async function updateTag(id: number, newName: string): Promise<Tag | null> {
+export async function updateTag(userId: number, id: number, newName: string): Promise<Tag | null> {
   const result = await pool.query(
-    'UPDATE tags SET name = $1 WHERE id = $2 RETURNING id, name, source',
-    [newName.toLowerCase(), id]
+    'UPDATE tags SET name = $1 WHERE id = $2 AND user_id = $3 RETURNING id, name, source',
+    [newName.toLowerCase(), id, userId]
   );
 
   if (!result.rows[0]) return null;
@@ -231,17 +244,27 @@ export async function updateTag(id: number, newName: string): Promise<Tag | null
   };
 }
 
-export async function deleteTag(id: number): Promise<boolean> {
+export async function deleteTag(userId: number, id: number): Promise<boolean> {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+
+    // Verify tag belongs to user
+    const ownerCheck = await client.query(
+      'SELECT user_id FROM tags WHERE id = $1',
+      [id]
+    );
+    if (ownerCheck.rows.length === 0 || ownerCheck.rows[0].user_id !== userId) {
+      await client.query('ROLLBACK');
+      return false;
+    }
 
     // Remove all note associations
     await client.query('DELETE FROM note_tags WHERE tag_id = $1', [id]);
     await client.query('DELETE FROM note_version_tags WHERE tag_id = $1', [id]);
 
     // Delete the tag
-    const result = await client.query('DELETE FROM tags WHERE id = $1', [id]);
+    const result = await client.query('DELETE FROM tags WHERE id = $1 AND user_id = $2', [id, userId]);
 
     await client.query('COMMIT');
     return result.rowCount ? result.rowCount > 0 : false;
@@ -254,7 +277,16 @@ export async function deleteTag(id: number): Promise<boolean> {
 }
 
 // Version history functions
-export async function getNoteVersions(noteId: number): Promise<NoteVersion[]> {
+export async function getNoteVersions(userId: number, noteId: number): Promise<NoteVersion[]> {
+  // First verify the note belongs to the user
+  const noteCheck = await pool.query(
+    'SELECT id FROM notes WHERE id = $1 AND user_id = $2',
+    [noteId, userId]
+  );
+  if (noteCheck.rows.length === 0) {
+    return [];
+  }
+
   const result = await pool.query(
     `
     SELECT nv.*,
@@ -275,7 +307,16 @@ export async function getNoteVersions(noteId: number): Promise<NoteVersion[]> {
   return result.rows;
 }
 
-export async function getNoteVersion(noteId: number, version: number): Promise<NoteVersion | null> {
+export async function getNoteVersion(userId: number, noteId: number, version: number): Promise<NoteVersion | null> {
+  // First verify the note belongs to the user
+  const noteCheck = await pool.query(
+    'SELECT id FROM notes WHERE id = $1 AND user_id = $2',
+    [noteId, userId]
+  );
+  if (noteCheck.rows.length === 0) {
+    return null;
+  }
+
   const result = await pool.query(
     `
     SELECT nv.*,
@@ -296,15 +337,25 @@ export async function getNoteVersion(noteId: number, version: number): Promise<N
 }
 
 // Tag management functions
-export async function addTagToNote(noteId: number, tagName: string, source: 'Self'): Promise<Note | null> {
+export async function addTagToNote(userId: number, noteId: number, tagName: string, source: 'Self'): Promise<Note | null> {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
-    // Insert or get tag
+    // Verify note belongs to user
+    const noteCheck = await client.query(
+      'SELECT id FROM notes WHERE id = $1 AND user_id = $2',
+      [noteId, userId]
+    );
+    if (noteCheck.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return null;
+    }
+
+    // Insert or get tag (ensure it belongs to the user)
     const tagResult = await client.query(
-      'INSERT INTO tags (name, source) VALUES ($1, $2) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING *',
-      [tagName.toLowerCase(), source]
+      'INSERT INTO tags (name, source, user_id) VALUES ($1, $2, $3) ON CONFLICT (name, user_id) DO UPDATE SET name = EXCLUDED.name RETURNING *',
+      [tagName.toLowerCase(), source, userId]
     );
     const tag = tagResult.rows[0];
 
@@ -316,7 +367,7 @@ export async function addTagToNote(noteId: number, tagName: string, source: 'Sel
 
     await client.query('COMMIT');
 
-    return await getNoteById(noteId);
+    return await getNoteById(userId, noteId);
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
@@ -325,10 +376,27 @@ export async function addTagToNote(noteId: number, tagName: string, source: 'Sel
   }
 }
 
-export async function removeTagFromNote(noteId: number, tagId: number): Promise<Note | null> {
+export async function removeTagFromNote(userId: number, noteId: number, tagId: number): Promise<Note | null> {
+  // Verify note belongs to user and tag belongs to user
+  const noteCheck = await pool.query(
+    'SELECT id FROM notes WHERE id = $1 AND user_id = $2',
+    [noteId, userId]
+  );
+  if (noteCheck.rows.length === 0) {
+    return null;
+  }
+
+  const tagCheck = await pool.query(
+    'SELECT id FROM tags WHERE id = $1 AND user_id = $2',
+    [tagId, userId]
+  );
+  if (tagCheck.rows.length === 0) {
+    return null;
+  }
+
   await pool.query(
     'DELETE FROM note_tags WHERE note_id = $1 AND tag_id = $2',
     [noteId, tagId]
   );
-  return await getNoteById(noteId);
+  return await getNoteById(userId, noteId);
 }
